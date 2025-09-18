@@ -1,0 +1,205 @@
+#!/bin/sh
+
+# ===== funcoes
+    _show(){ echo "# $@"; }
+
+    # Verificar se consta uma string nas regras
+    # retorno: numero de registros encontrados (contador)
+    _nft_rules_find(){
+        proto="$1"; table="$2"; chain="$3"; strf="$4"
+        ctn=$(nft --handle list chain $proto $table $chain 2>/dev/null | egrep "$strf" | wc -l)
+        echo $ctn
+    }
+
+    # Procurar e remover regras por uma STRING de busca
+    _nft_rules_delete(){
+        proto="$1"; table="$2"; chain="$3"; strf="$4"
+        nft --handle list chain $proto $table $chain 2>/dev/null \
+        | egrep "$strf" | while read rule; do
+            hid=$(echo "$rule" | cut -f2 -d'#' | awk '{print $2}')
+            nft delete rule $proto $table $chain handle $hid 2>/dev/null
+        done
+    }
+
+    # Inserir entrada de captura
+    _nft_chain_hook_add(){
+        proto="$1";  # protocolo: ip, ip6
+        table="$2";  # tabela: raw, mangle, filter, nat
+        chain="$3";  # chain: PREROUTING, INPUT, ...
+        target="$4"; # chain target: ..._HOOK
+        crules=$(_nft_rules_find $proto $table $chain "$target");
+        # protocolo de exibicao
+        lproto="ipv4";
+        [ "$proto" = "ip6" ] && lproto="ipv6";
+        # conferir se o hook ja foi feito
+        if [ "$crules" = "1" -a "$opt" != "force" ]; then
+            _show "$lproto $table $chain hook - OK"
+        else
+            _show "$lproto $table $chain hook - Setup $target on $chain ..."
+            nft add chain $proto $table $target 2>/dev/null
+            _nft_rules_delete $proto $table $chain "$target"
+            nft insert rule $proto $table $chain counter jump $target
+        fi
+    }
+
+
+# ===== argumentos
+
+    opt="$1"
+
+# ===== tabelas principais (ignorar erros)
+    # - ipv4
+    _show "create ipv4 tables"
+    nft create table ip nat    2>/dev/null
+    nft create table ip filter 2>/dev/null
+    nft create table ip raw    2>/dev/null
+    nft create table ip mangle 2>/dev/null
+    # - ipv6
+    _show "create ipv6 tables"
+    nft create table ip6 nat    2>/dev/null
+    nft create table ip6 filter 2>/dev/null
+    nft create table ip6 raw    2>/dev/null
+    nft create table ip6 mangle 2>/dev/null
+
+# ===== chains principais (ignorar erros)
+    # - ipv4
+    _show "create ipv4 chains"
+    nft create chain ip raw     PREROUTING   '{ type filter hook prerouting priority raw; policy accept; }'     2>/dev/null
+    nft create chain ip raw     OUTPUT       '{ type filter hook output priority raw; policy accept; }'         2>/dev/null
+    nft create chain ip mangle  PREROUTING   '{ type filter hook prerouting priority mangle; policy accept; }'  2>/dev/null
+    nft create chain ip mangle  POSTROUTING  '{ type filter hook postrouting priority mangle; policy accept; }' 2>/dev/null
+    nft create chain ip mangle  FORWARD      '{ type filter hook forward priority mangle; policy accept; }'     2>/dev/null
+    nft create chain ip mangle  INPUT        '{ type filter hook input priority mangle; policy accept; }'       2>/dev/null
+    nft create chain ip mangle  OUTPUT       '{ type route hook output priority mangle; policy accept; }'       2>/dev/null
+    nft create chain ip nat     POSTROUTING  '{ type nat hook postrouting priority srcnat; policy accept; }'    2>/dev/null
+    nft create chain ip nat     PREROUTING   '{ type nat hook prerouting priority dstnat; policy accept; }'     2>/dev/null
+    nft create chain ip nat     OUTPUT       '{ type nat hook output priority -100; policy accept; }'           2>/dev/null
+    nft create chain ip filter  FORWARD      '{ type filter hook forward priority filter; policy accept; }'     2>/dev/null
+    nft create chain ip filter  INPUT        '{ type filter hook input priority filter; policy accept; }'       2>/dev/null
+    nft create chain ip filter  OUTPUT       '{ type filter hook output priority filter; policy accept; }'      2>/dev/null
+
+    # - ipv6
+    _show "create ipv6 chains"
+    nft create chain ip6 raw    PREROUTING  '{ type filter hook prerouting priority raw; policy accept; }'     2>/dev/null
+    nft create chain ip6 raw    OUTPUT      '{ type filter hook output priority raw; policy accept; }'         2>/dev/null
+    nft create chain ip6 mangle PREROUTING  '{ type filter hook prerouting priority mangle; policy accept; }'  2>/dev/null
+    nft create chain ip6 mangle POSTROUTING '{ type filter hook postrouting priority mangle; policy accept; }' 2>/dev/null
+    nft create chain ip6 mangle FORWARD     '{ type filter hook forward priority mangle; policy accept; }'     2>/dev/null
+    nft create chain ip6 mangle INPUT       '{ type filter hook input priority mangle; policy accept; }'       2>/dev/null
+    nft create chain ip6 mangle OUTPUT      '{ type route hook output priority mangle; policy accept; }'       2>/dev/null
+    nft create chain ip6 nat    POSTROUTING '{ type nat hook postrouting priority srcnat; policy accept; }'    2>/dev/null
+    nft create chain ip6 nat    PREROUTING  '{ type nat hook prerouting priority dstnat; policy accept; }'     2>/dev/null
+    nft create chain ip6 nat    OUTPUT      '{ type nat hook output priority -100; policy accept; }'           2>/dev/null
+    nft create chain ip6 filter FORWARD     '{ type filter hook forward priority filter; policy accept; }'     2>/dev/null
+    nft create chain ip6 filter INPUT       '{ type filter hook input priority filter; policy accept; }'       2>/dev/null
+    nft create chain ip6 filter OUTPUT      '{ type filter hook output priority filter; policy accept; }'      2>/dev/null
+
+
+# ===== tabelas de hook
+
+    _show "create hooks"
+
+    # - RAW
+    # - ipv4
+    _nft_chain_hook_add ip   raw     PREROUTING     IPV4_RAW_PREROUTING
+    _nft_chain_hook_add ip   raw     OUTPUT         IPV4_RAW_OUTPUT
+    # - ipv6
+    _nft_chain_hook_add ip6  raw     PREROUTING     IPV6_RAW_PREROUTING
+    _nft_chain_hook_add ip6  raw     OUTPUT         IPV6_RAW_OUTPUT
+
+    # - MANGLE
+    # - ipv4
+    _nft_chain_hook_add ip   mangle  PREROUTING     IPV4_MANGLE_PREROUTING
+    _nft_chain_hook_add ip   mangle  POSTROUTING    IPV4_MANGLE_POSTROUTING
+    _nft_chain_hook_add ip   mangle  INPUT          IPV4_MANGLE_INPUT
+    _nft_chain_hook_add ip   mangle  OUTPUT         IPV4_MANGLE_OUTPUT
+    _nft_chain_hook_add ip   mangle  FORWARD        IPV4_MANGLE_FORWARD
+    # - ipv 6
+    _nft_chain_hook_add ip6  mangle  PREROUTING     IPV6_MANGLE_PREROUTING
+    _nft_chain_hook_add ip6  mangle  POSTROUTING    IPV6_MANGLE_POSTROUTING
+    _nft_chain_hook_add ip6  mangle  INPUT          IPV6_MANGLE_INPUT
+    _nft_chain_hook_add ip6  mangle  OUTPUT         IPV6_MANGLE_OUTPUT
+    _nft_chain_hook_add ip6  mangle  FORWARD        IPV6_MANGLE_FORWARD
+
+    # - NAT
+    # - ipv4
+    _nft_chain_hook_add ip   nat     PREROUTING     IPV4_NAT_PREROUTING
+    _nft_chain_hook_add ip   nat     POSTROUTING    IPV4_NAT_POSTROUTING
+    _nft_chain_hook_add ip   nat     OUTPUT         IPV4_NAT_OUTPUT
+    # - ipv6
+    _nft_chain_hook_add ip6  nat     PREROUTING     IPV6_NAT_PREROUTING
+    _nft_chain_hook_add ip6  nat     POSTROUTING    IPV6_NAT_POSTROUTING
+    _nft_chain_hook_add ip6  nat     OUTPUT         IPV6_NAT_OUTPUT
+
+    # - FILTER
+    # - ipv4
+    _nft_chain_hook_add ip   filter  INPUT          IPV4_FILTER_INPUT
+    _nft_chain_hook_add ip   filter  OUTPUT         IPV4_FILTER_OUTPUT
+    _nft_chain_hook_add ip   filter  FORWARD        IPV4_FILTER_FORWARD
+    # - ipv6
+    _nft_chain_hook_add ip6  filter  INPUT          IPV6_FILTER_INPUT
+    _nft_chain_hook_add ip6  filter  OUTPUT         IPV6_FILTER_OUTPUT
+    _nft_chain_hook_add ip6  filter  FORWARD        IPV6_FILTER_FORWARD
+
+
+# ===== HOOK pronto, colocar regras personalizadas abaixo:
+
+    # limpar tabelas de hook
+    _show "clear hook rules"
+    nft flush chain ip  raw     IPV4_RAW_PREROUTING
+    nft flush chain ip6 raw     IPV6_RAW_PREROUTING
+    nft flush chain ip  nat     IPV4_NAT_PREROUTING
+    nft flush chain ip6 nat     IPV6_NAT_PREROUTING
+    nft flush chain ip  nat     IPV4_NAT_POSTROUTING
+    nft flush chain ip6 nat     IPV6_NAT_POSTROUTING
+    nft flush chain ip  filter  IPV4_FILTER_FORWARD
+    nft flush chain ip6 filter  IPV6_FILTER_FORWARD
+
+    # criar permit em tudo que envolver firewall do docker sem firewall
+    _show "start no-firewall rules"
+    nft add rule ip  raw     IPV4_RAW_PREROUTING    counter accept
+    nft add rule ip6 raw     IPV6_RAW_PREROUTING    counter accept
+    #nft add rule ip  nat     IPV4_NAT_PREROUTING   counter accept
+    #nft add rule ip6 nat     IPV6_NAT_PREROUTING   counter accept
+    nft add rule ip  filter  IPV4_FILTER_FORWARD    counter accept
+    nft add rule ip6 filter  IPV6_FILTER_FORWARD    counter accept
+
+    # redirecionamento de portas fora do docker (faixas grandes, por ip de origem, etc...)
+    #nft add rule ip  nat     IPV4_NAT_PREROUTING        counter accept
+    #nft add rule ip6 nat     IPV6_NAT_PREROUTING        counter accept
+
+    # nat no ip de origem para rotas externas
+    _show "start auto-source NAT"
+
+    # - obter ips de origem, coloque manual se preferir
+    src4=$(ip -o -4 ro get 1.2.3.4     | sed 's#src.#|#g'| cut -f2 -d'|' | awk '{print $1}')
+    dev4=$(ip -o -4 ro get 1.2.3.4     | sed 's#dev.#|#g'| cut -f2 -d'|' | awk '{print $1}')
+    src6=$(ip -o -6 ro get 2fff:ffff:: | sed 's#src.#|#g'| cut -f2 -d'|' | awk '{print $1}')
+    dev6=$(ip -o -6 ro get 2fff:ffff:: | sed 's#dev.#|#g'| cut -f2 -d'|' | awk '{print $1}')
+    _show "ipv4 nat source: $src4 ($dev4)"
+    _show "ipv6 nat source: $src6 ($dev6)"
+
+    # - criar regras de SNAT baseado no ip de origem indicado pelo roteamento
+    nft add set      ip   nat PRIVNETS_IPV4 '{ type ipv4_addr; flags interval; }'
+    nft add set      ip6  nat PRIVNETS_IPV6 '{ type ipv6_addr; flags interval; }'
+    nft add element  ip   nat PRIVNETS_IPV4 '{ 10.0.0.0/8, 192.168.0.0/16, 172.16.0.0/12 }'
+    nft add element  ip6  nat PRIVNETS_IPV6 '{ ::/3, 2001:db8::/32, 4000::/2, 8000::/1 }'
+    # nat atualizado ipv4
+    [ "x$dev4" = "x" -o "x$src4" = "x" ] || \
+        # nft add rule ip  nat IPV4_NAT_POSTROUTING ip  saddr @PRIVNETS_IPV4 oifname "$dev4" counter snat ip  to $src4
+
+    # nat atualizado ipv6
+    [ "x$dev6" = "x" -o "x$src6" = "x" ] || \
+        # nft add rule ip6 nat IPV6_NAT_POSTROUTING ip6 saddr @PRIVNETS_IPV6 oifname "$dev6" counter snat ip6 to $src6
+
+    # scripts manuais complementares
+    SCDIR="/etc/docker-nft.d";
+    [ -d "$SCDIR" ] && cd "$SCDIR" && {
+	# scripts complementares em shell-script
+	for script in *.sh; do [ -x "$script" -a -f "$script" ] && { _show "script: $script"; ./$script; }; done 2>/dev/null;
+	# scripts complementares em nftables
+	for nftinc in *.nft; do [ -f "$nftinc" ] && { _show "firewall: $nftinc"; nft -f $nftinc; }; done 2>/dev/null;
+    }
+
+
+exit 0

@@ -1,0 +1,107 @@
+Criando o arquivo de serviço{
+    nano /etc/systemd/system/firewall-docker-fix.service
+
+    [Unit]
+    Description=Custom NFTables rules for Docker routed network
+    # Adicionamos docker.service aqui. Nosso script agora roda DEPOIS do docker.
+    After=multi-user.target network-online.target docker.service
+    Wants=network-online.target docker.service
+
+    [Service]
+    Type=oneshot
+    RemainAfterExit=yes
+
+    # Adicionamos uma pausa de 15 segundos como garantia extra.
+    # Isso dá tempo para a rede e o docker se estabilizarem completamente.
+    ExecStartPre=/bin/sleep 15
+    # O comando principal permanece o mesmo.
+    ExecStart=/zabbix-proxies/docker-nft-hook
+
+    [Install]
+    WantedBy=multi-user.target
+
+    SALVE E FECHE
+
+}
+Comandos para habilitar e iniciar o serviço:
+
+# Recarrega o systemd para ele encontrar o novo arquivo
+sudo systemctl daemon-reload
+
+# Habilita o serviço para iniciar no boot
+sudo systemctl enable firewall-docker-fix.service
+
+# Inicia o serviço agora (mesmo efeito de rodar o script manualmente)
+sudo systemctl start firewall-docker-fix.service
+
+# Verifique se ele rodou sem erros
+sudo systemctl status firewall-docker-fix.service
+
+Aplicação de script para uso de crontab do Patrick{
+    # Criar diretorios dos scripts periodicos:
+    # - intervalos curtos
+    mkdir -p /etc/cron.1min
+    mkdir -p /etc/cron.5min
+    mkdir -p /etc/cron.10min
+    mkdir -p /etc/cron.15min
+    mkdir -p /etc/cron.30min
+    # - intervalos basicos
+    mkdir -p /etc/cron.hourly
+    mkdir -p /etc/cron.daily
+    mkdir -p /etc/cron.weekly
+    mkdir -p /etc/cron.monthly
+    # - agendadores de dias da semana
+    mkdir -p /etc/cron.monday
+    mkdir -p /etc/cron.tuesday
+    mkdir -p /etc/cron.wednesday
+    mkdir -p /etc/cron.thursday
+    mkdir -p /etc/cron.friday
+    mkdir -p /etc/cron.saturday
+    mkdir -p /etc/cron.sunday
+
+    # Criar config de contrab
+    (
+    echo "PATH=/usr/sbin:/usr/bin:/sbin:/bin"
+    echo "0  *  *  *  *  run-parts --regex '.*' /etc/cron.hourly"
+    echo "0  2  *  *  *  run-parts --regex '.*' /etc/cron.daily"
+    echo "0  3  *  *  6  run-parts --regex '.*' /etc/cron.weekly"
+    echo "0  5  1  *  *  run-parts --regex '.*' /etc/cron.monthly"
+    for min in 1 5 10 15 30; do
+        echo "*/$min  *  *  *  *  run-parts --regex '.*' /etc/cron.${min}min"
+    done
+    echo "0  0  *  *  0  run-parts --regex '.*' /etc/cron.sunday"
+    echo "0  0  *  *  1  run-parts --regex '.*' /etc/cron.monday"
+    echo "0  0  *  *  2  run-parts --regex '.*' /etc/cron.tuesday"
+    echo "0  0  *  *  3  run-parts --regex '.*' /etc/cron.wednesday"
+    echo "0  0  *  *  4  run-parts --regex '.*' /etc/cron.thursday"
+    echo "0  0  *  *  5  run-parts --regex '.*' /etc/cron.friday"
+    echo "0  0  *  *  6  run-parts --regex '.*' /etc/cron.saturday"
+    ) > /tmp/cron-list
+
+    # Registrar no crontab:
+    cat /tmp/cron-list | crontab -
+
+    # Conferir se instalou agendadores:
+    crontab -l
+}
+
+Criação do arquivo de log para o script de verificação de regras de firewall{
+    touch var/log/docker-hook-check.log
+}
+
+Criação do script de verificação das regras de firewall{
+    nano /etc/cron.1min/docker-hook-check
+
+    #!/bin/bash
+
+    C=$(nft list ruleset 2>/dev/null | grep IPV4_FILTER | wc -l);
+
+    [ "$C" = "0" ] && /zabbix-proxies/docker-nft-hook;
+
+    echo "Script de verificação de firewall executado em $(date)" >> /var/log/docker-hook-check.log
+
+    exit 0;
+
+    SALVE E FECHE
+}
+

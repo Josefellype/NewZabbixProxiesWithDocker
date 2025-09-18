@@ -1,0 +1,200 @@
+networks:
+  zabbix_proxy_net:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_ip_masquerade: "false" 
+      com.docker.network.bridge.enable_icc: "true"
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.16.3.0/28
+          gateway: 172.16.3.1
+
+services:
+  prx1:
+    build: .
+    container_name: "zabbix-proxy-g1-prx1"
+    restart: unless-stopped
+    networks:
+      zabbix_proxy_net:
+        ipv4_address: 172.16.3.2
+    environment:
+      - ZBX_PROXYMODE=0
+      - ZBX_SERVER_HOST=100.76.180.207:10051;172.16.9.78:10051
+      - ZBX_HOSTNAME=prx-g1-p1
+      - ZBX_DEBUGLEVEL=3
+      - ZBX_ENABLEREMOTECOMMANDS=1
+      - ZBX_PROXYLOCALBUFFER=0
+      - ZBX_PROXYOFFLINEBUFFER=1
+      - ZBX_PROXYCONFIGFREQUENCY=10
+      - ZBX_DATASENDERFREQUENCY=1
+      - ZBX_PROXYBUFFERMODE=hybrid
+      - ZBX_PROXYMEMORYBUFFERSIZE=1G
+      - ZBX_STARTPOLLERS=10
+      - ZBX_MAXCONCURRENTCHECKSPERPOLLER=1000
+      - ZBX_STARTSNMPPOLLERS=10
+      - ZBX_STARTPREPROCESSORS=5
+      - ZBX_STARTPOLLERSUNREACHABLE=30
+      - ZBX_STARTPINGERS=30
+      - ZBX_STARTDISCOVERERS=3
+      - ZBX_HOUSEKEEPINGFREQUENCY=1
+      - ZBX_CACHESIZE=256M
+      - ZBX_HISTORYCACHESIZE=128M
+      - ZBX_STARTDBSYNCERS=4
+      - ZBX_HISTORYINDEXCACHESIZE=32M
+      - ZBX_TIMEOUT=30
+      - ZBX_UNREACHABLEPERIOD=45
+      - ZBX_UNAVAILABLEDELAY=60
+      - ZBX_UNREACHABLEDELAY=15
+      - ZBX_LOGSLOWQUERIES=3000
+      - ZBX_STATSALLOWEDIP=127.0.0.1
+    volumes:
+      - ./g1/prx1/db_data:/var/lib/zabbix/db_data
+      - ./g1/prx1/alertscripts:/usr/lib/zabbix/alertscripts
+      - ./g1/prx1/externalscripts:/usr/lib/zabbix/externalscripts
+      - ./g1/prx1/enc:/var/lib/zabbix/enc
+      - ./g1/prx1/mibs:/var/lib/zabbix/mibs
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+
+  prx2:
+    build: .
+    container_name: "zabbix-proxy-g2-prx1"
+    restart: unless-stopped
+    networks:
+      zabbix_proxy_net:
+        ipv4_address: 172.16.3.3
+    environment:
+      - ZBX_PROXYMODE=0
+      - ZBX_SERVER_HOST=100.76.180.207:10051;172.16.9.78:10051
+      - ZBX_HOSTNAME=prx-g2-p1
+      - ZBX_DEBUGLEVEL=3
+      - ZBX_ENABLEREMOTECOMMANDS=1
+      - ZBX_PROXYLOCALBUFFER=0
+      - ZBX_PROXYOFFLINEBUFFER=1
+      - ZBX_PROXYCONFIGFREQUENCY=10
+      - ZBX_DATASENDERFREQUENCY=1
+      - ZBX_PROXYBUFFERMODE=hybrid
+      - ZBX_PROXYMEMORYBUFFERSIZE=1G
+      - ZBX_STARTPOLLERS=10
+      - ZBX_MAXCONCURRENTCHECKSPERPOLLER=1000
+      - ZBX_STARTSNMPPOLLERS=10
+      - ZBX_STARTPREPROCESSORS=5
+      - ZBX_STARTPOLLERSUNREACHABLE=30
+      - ZBX_STARTPINGERS=30
+      - ZBX_STARTDISCOVERERS=3
+      - ZBX_HOUSEKEEPINGFREQUENCY=1
+      - ZBX_CACHESIZE=256M
+      - ZBX_HISTORYCACHESIZE=128M
+      - ZBX_STARTDBSYNCERS=4
+      - ZBX_HISTORYINDEXCACHESIZE=32M
+      - ZBX_TIMEOUT=30
+      - ZBX_UNREACHABLEPERIOD=45
+      - ZBX_UNAVAILABLEDELAY=60
+      - ZBX_UNREACHABLEDELAY=15
+      - ZBX_LOGSLOWQUERIES=3000
+      - ZBX_STATSALLOWEDIP=127.0.0.1
+    volumes:
+      - ./g2/prx1/db_data:/var/lib/zabbix/db_data
+      - ./g2/prx1/alertscripts:/usr/lib/zabbix/alertscripts
+      - ./g2/prx1/externalscripts:/usr/lib/zabbix/externalscripts
+      - ./g2/prx1/enc:/var/lib/zabbix/enc
+      - ./g2/prx1/mibs:/var/lib/zabbix/mibs
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+
+  prx3:
+    build: .
+    container_name: "zabbix-proxy-g3-prx1"
+    restart: unless-stopped
+    networks:
+      zabbix_proxy_net:
+        ipv4_address: 172.16.3.4
+    environment:
+      - ZBX_PROXYMODE=0
+      - ZBX_SERVER_HOST=100.76.180.207:10051;172.16.9.78:10051
+      - ZBX_HOSTNAME=prx-g3-p1
+      - ZBX_DEBUGLEVEL=3
+      - ZBX_ENABLEREMOTECOMMANDS=1
+      - ZBX_PROXYLOCALBUFFER=0
+      - ZBX_PROXYOFFLINEBUFFER=1
+      - ZBX_PROXYCONFIGFREQUENCY=10
+      - ZBX_DATASENDERFREQUENCY=1
+      - ZBX_PROXYBUFFERMODE=hybrid
+      - ZBX_PROXYMEMORYBUFFERSIZE=1G
+      - ZBX_STARTPOLLERS=10
+      - ZBX_MAXCONCURRENTCHECKSPERPOLLER=1000
+      - ZBX_STARTSNMPPOLLERS=10
+      - ZBX_STARTPREPROCESSORS=5
+      - ZBX_STARTPOLLERSUNREACHABLE=30
+      - ZBX_STARTPINGERS=30
+      - ZBX_STARTDISCOVERERS=3
+      - ZBX_HOUSEKEEPINGFREQUENCY=1
+      - ZBX_CACHESIZE=256M
+      - ZBX_HISTORYCACHESIZE=128M
+      - ZBX_STARTDBSYNCERS=4
+      - ZBX_HISTORYINDEXCACHESIZE=32M
+      - ZBX_TIMEOUT=30
+      - ZBX_UNREACHABLEPERIOD=45
+      - ZBX_UNAVAILABLEDELAY=60
+      - ZBX_UNREACHABLEDELAY=15
+      - ZBX_LOGSLOWQUERIES=3000
+      - ZBX_STATSALLOWEDIP=127.0.0.1
+    volumes:
+      - ./g3/prx1/db_data:/var/lib/zabbix/db_data
+      - ./g3/prx1/alertscripts:/usr/lib/zabbix/alertscripts
+      - ./g3/prx1/externalscripts:/usr/lib/zabbix/externalscripts
+      - ./g3/prx1/enc:/var/lib/zabbix/enc
+      - ./g3/prx1/mibs:/var/lib/zabbix/mibs
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+
+  prx4:
+    build: .
+    container_name: "zabbix-proxy-g4-prx1"
+    restart: unless-stopped
+    networks:
+      zabbix_proxy_net:
+        ipv4_address: 172.16.3.5
+    environment:
+      - ZBX_PROXYMODE=0
+      - ZBX_SERVER_HOST=100.76.180.207:10051;172.16.9.78:10051
+      - ZBX_HOSTNAME=prx-g4-p1
+      - ZBX_DEBUGLEVEL=3
+      - ZBX_ENABLEREMOTECOMMANDS=1
+      - ZBX_PROXYLOCALBUFFER=0
+      - ZBX_PROXYOFFLINEBUFFER=1
+      - ZBX_PROXYCONFIGFREQUENCY=10
+      - ZBX_DATASENDERFREQUENCY=1
+      - ZBX_PROXYBUFFERMODE=hybrid
+      - ZBX_PROXYMEMORYBUFFERSIZE=1G
+      - ZBX_STARTPOLLERS=10
+      - ZBX_MAXCONCURRENTCHECKSPERPOLLER=1000
+      - ZBX_STARTSNMPPOLLERS=10
+      - ZBX_STARTPREPROCESSORS=5
+      - ZBX_STARTPOLLERSUNREACHABLE=30
+      - ZBX_STARTPINGERS=30
+      - ZBX_STARTDISCOVERERS=3
+      - ZBX_HOUSEKEEPINGFREQUENCY=1
+      - ZBX_CACHESIZE=256M
+      - ZBX_HISTORYCACHESIZE=128M
+      - ZBX_STARTDBSYNCERS=4
+      - ZBX_HISTORYINDEXCACHESIZE=32M
+      - ZBX_TIMEOUT=30
+      - ZBX_UNREACHABLEPERIOD=45
+      - ZBX_UNAVAILABLEDELAY=60
+      - ZBX_UNREACHABLEDELAY=15
+      - ZBX_LOGSLOWQUERIES=3000
+      - ZBX_STATSALLOWEDIP=127.0.0.1
+    volumes:
+      - ./g4/prx1/db_data:/var/lib/zabbix/db_data
+      - ./g4/prx1/alertscripts:/usr/lib/zabbix/alertscripts
+      - ./g4/prx1/externalscripts:/usr/lib/zabbix/externalscripts
+      - ./g4/prx1/enc:/var/lib/zabbix/enc
+      - ./g4/prx1/mibs:/var/lib/zabbix/mibs
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
