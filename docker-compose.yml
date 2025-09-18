@@ -48,6 +48,13 @@ services:
       - ZBX_UNREACHABLEDELAY=15
       - ZBX_LOGSLOWQUERIES=3000
       - ZBX_STATSALLOWEDIP=127.0.0.1
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+      nproc:
+        soft: 65536
+        hard: 65536
     volumes:
       - ./g1/prx1/db_data:/var/lib/zabbix/db_data
       - ./g1/prx1/alertscripts:/usr/lib/zabbix/alertscripts
@@ -95,6 +102,13 @@ services:
       - ZBX_UNREACHABLEDELAY=15
       - ZBX_LOGSLOWQUERIES=3000
       - ZBX_STATSALLOWEDIP=127.0.0.1
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+      nproc:
+        soft: 65536
+        hard: 65536
     volumes:
       - ./g2/prx2/db_data:/var/lib/zabbix/db_data
       - ./g2/prx2/alertscripts:/usr/lib/zabbix/alertscripts
@@ -142,6 +156,13 @@ services:
       - ZBX_UNREACHABLEDELAY=15
       - ZBX_LOGSLOWQUERIES=3000
       - ZBX_STATSALLOWEDIP=127.0.0.1
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+      nproc:
+        soft: 65536
+        hard: 65536
     volumes:
       - ./g3/prx3/db_data:/var/lib/zabbix/db_data
       - ./g3/prx3/alertscripts:/usr/lib/zabbix/alertscripts
@@ -189,6 +210,13 @@ services:
       - ZBX_UNREACHABLEDELAY=15
       - ZBX_LOGSLOWQUERIES=3000
       - ZBX_STATSALLOWEDIP=127.0.0.1
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+      nproc:
+        soft: 65536
+        hard: 65536
     volumes:
       - ./g4/prx4/db_data:/var/lib/zabbix/db_data
       - ./g4/prx4/alertscripts:/usr/lib/zabbix/alertscripts
