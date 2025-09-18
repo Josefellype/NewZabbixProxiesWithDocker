@@ -134,13 +134,12 @@ wget -O "${COMPOSE_PATH}" "${GITHUB_URL_COMPOSE}"
 chmod +x "${COMPOSE_PATH}"
 
 # Loop para criar os subdiretórios dos volumes dos proxies
-for prx in prx1 prx2 prx3 prx4; do
-    mkdir -p $BASE_DIR/$prx/db_data
-    mkdir -p $BASE_DIR/$prx/alertscripts
-    mkdir -p $BASE_DIR/$prx/externalscripts
-    mkdir -p $BASE_DIR/$prx/enc
-    mkdir -p $BASE_DIR/$prx/mibs
-    mkdir -p $BASE_DIR/$prx/netbird
+for i in 1 2 3 4; do
+    mkdir -p "${BASE_DIR}/g${i}/prx${i}/db_data"
+    mkdir -p "${BASE_DIR}/g${i}/prx${i}/alertscripts"
+    mkdir -p "${BASE_DIR}/g${i}/prx${i}/externalscripts"
+    mkdir -p "${BASE_DIR}/g${i}/prx${i}/enc"
+    mkdir -p "${BASE_DIR}/g${i}/prx${i}/mibs"
 done
 
 ### 6. Configuração do Firewall com systemd (Execução no Boot) ###
