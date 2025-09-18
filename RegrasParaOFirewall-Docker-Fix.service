@@ -1,3 +1,5 @@
+mv docker-nft-hook /zabbix-proxies/docker-nft-hook
+
 Criando o arquivo de serviço{
     nano /etc/systemd/system/firewall-docker-fix.service
 
@@ -104,4 +106,3 @@ Criação do script de verificação das regras de firewall{
 
     SALVE E FECHE
 }
-

@@ -11,7 +11,7 @@ timedatectl set-ntp true
 ### 2. Instalação de dependências ###
 echo "[PREPARE] Passo 2: Instalando dependências essenciais..."
 apt-get update -y
-# Adicionamos nftables aqui para garantir que a ferramenta esteja disponível
+
 apt-get install -y \
     ca-certificates \
     curl \
@@ -46,18 +46,92 @@ apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin do
 systemctl enable docker
 systemctl start docker
 
-### 4. Configuração da Estrutura de Diretórios e Scripts ###
+### 4. Instalação e Configuração do Servidor SSH ###
+echo "[PREPARE] Passo 4: Instalando e configurando o servidor SSH..."
+
+# Instala o servidor OpenSSH e garante que o serviço esteja ativo
+apt-get update -y && apt-get install -y openssh-server
+systemctl enable ssh --now
+
+# -- ETAPA DE SEGURANÇA: FAZER BACKUP DO ARQUIVO ORIGINAL --
+# Fazemos isso para que seja sempre possível reverter para o original.
+# O '-n' garante que não vamos sobrescrever um backup existente.
+cp -n /etc/ssh/sshd_config /etc/ssh/sshd_config.orig
+
+# -- FUNÇÃO AUXILIAR PARA ALTERAR CONFIGURAÇÕES --
+# Esta função "upsert" (update or insert) torna nosso script mais limpo.
+# Argumento 1: Chave (ex: "Port")
+# Argumento 2: Valor (ex: "22")
+upsert_ssh_config() {
+    local key="$1"
+    local value="$2"
+    local config_file="/etc/ssh/sshd_config"
+
+    echo "    -> Garantindo que '$key' seja '$value'..."
+
+    # Primeiro, tenta encontrar e substituir a linha existente (comentada ou não).
+    # A regex procura pelo início da linha (^), talvez um #, espaços, a chave, e substitui a linha toda.
+    sed -i.bak -E "s/^\s*#?\s*${key}\s+.*/${key} ${value}/" "${config_file}"
+
+    # Se, após a substituição, a linha ainda não existir, adiciona-a ao final do arquivo.
+    if ! grep -q -E "^\s*${key}\s+${value}" "${config_file}"; then
+        echo "${key} ${value}" >> "${config_file}"
+    fi
+}
+
+# -- APLICAÇÃO DAS CONFIGURAÇÕES DESEJADAS --
+# Usamos a função para cada parâmetro que você especificou.
+upsert_ssh_config "PermitRootLogin" "yes"
+upsert_ssh_config "PasswordAuthentication" "yes"
+upsert_ssh_config "PubkeyAuthentication" "yes"
+upsert_ssh_config "PermitEmptyPasswords" "no"
+upsert_ssh_config "Port" "22"
+upsert_ssh_config "ListenAddress" "0.0.0.0"
+upsert_ssh_config "MaxSessions" "10"
+
+# -- VALIDAÇÃO E REINICIALIZAÇÃO DO SERVIÇO --
+echo "[PREPARE] Validando a nova configuração do SSH..."
+
+# 'sshd -t' é o comando para testar a sintaxe do arquivo de configuração.
+# Se o comando falhar, o script irá parar por causa do 'set -e'.
+sshd -t
+
+echo "[PREPARE] Reiniciando o serviço SSH para aplicar as mudanças..."
+systemctl restart ssh
+
+echo "[PREPARE] Configuração do SSH finalizada."
+
+### 5. Configuração da Estrutura de Diretórios e Scripts ###
 BASE_DIR="/zabbix-proxies"
 HOOK_SCRIPT_NAME="docker-nft-hook"
 HOOK_SCRIPT_PATH="${BASE_DIR}/${HOOK_SCRIPT_NAME}"
+DOCKERFILE_PATH="${BASE_DIR}/Dockerfile"
+ENTRYPOINT_PATH="${BASE_DIR}/entrypoint.sh"
+COMPOSE_PATH="${BASE_DIR}/docker-compose.yml"
 
-echo "[PREPARE] Passo 4: Criando diretórios e movendo script de firewall para ${BASE_DIR}..."
+GITHUB_URL_NFT_HOOK="https://github.com/Josefellype/NewZabbixProxiesWithDocker/raw/refs/heads/main/docker-nft-hook" 
+
+GITHUB_URL_DOCKERFILE="https://github.com/Josefellype/NewZabbixProxiesWithDocker/raw/refs/heads/main/Dockerfile"
+
+GITHUB_URL_ENTRYPOINT="https://github.com/Josefellype/NewZabbixProxiesWithDocker/raw/refs/heads/main/entrypoint.sh"
+
+GITHUB_URL_COMPOSE="https://github.com/Josefellype/NewZabbixProxiesWithDocker/raw/refs/heads/main/docker-compose.yml" 
+
+echo "[PREPARE] Passo 5: Criando diretórios e baixando script de firewall..."
 mkdir -p "$BASE_DIR"
 
-# Move o script de firewall da raiz para o diretório de trabalho
-# Assumimos que o script está na mesma pasta que o prepare_host.sh
-mv "./${HOOK_SCRIPT_NAME}" "${HOOK_SCRIPT_PATH}"
+# Baixa o script de firewall diretamente do GitHub
+wget -O "${HOOK_SCRIPT_PATH}" "${GITHUB_URL_NFT_HOOK}"
 chmod +x "${HOOK_SCRIPT_PATH}"
+
+wget -O "${DOCKERFILE_PATH}" "${GITHUB_URL_DOCKERFILE}"
+chmod +x "${DOCKERFILE_PATH}"
+
+wget -O "${ENTRYPOINT_PATH}" "${GITHUB_URL_ENTRYPOINT}"
+chmod +x "${ENTRYPOINT_PATH}"
+
+wget -O "${COMPOSE_PATH}" "${GITHUB_URL_COMPOSE}"
+chmod +x "${COMPOSE_PATH}"
 
 # Loop para criar os subdiretórios dos volumes dos proxies
 for i in {1..4}; do
@@ -68,11 +142,11 @@ for i in {1..4}; do
     mkdir -p "${BASE_DIR}/g${i}/prx1/mibs"
 done
 
-### 5. Configuração do Firewall com systemd (Execução no Boot) ###
+### 6. Configuração do Firewall com systemd (Execução no Boot) ###
 SERVICE_NAME="firewall-docker-fix.service"
 SERVICE_PATH="/etc/systemd/system/${SERVICE_NAME}"
 
-echo "[PREPARE] Passo 5: Criando e habilitando serviço systemd para o firewall no boot..."
+echo "[PREPARE] Passo 6: Criando e habilitando serviço systemd para o firewall no boot..."
 
 # Usamos 'cat <<EOF | tee' para escrever o conteúdo no arquivo de forma não interativa
 cat <<EOF | tee "${SERVICE_PATH}"
@@ -94,13 +168,16 @@ EOF
 # Recarrega o systemd, habilita e inicia o serviço
 systemctl daemon-reload
 systemctl enable "${SERVICE_NAME}"
+
 # Executa o script uma vez agora para aplicar as regras imediatamente
 systemctl start "${SERVICE_NAME}"
 
 echo "[PREPARE] Verificando status do serviço de firewall..."
 systemctl status "${SERVICE_NAME}" --no-pager -l
 
-echo "[PREPARE] Passo 6: Configurando verificação periódica do firewall com cron..."
+### 7. Configuração do Cron (Verificação periódica) 
+
+echo "[PREPARE] Passo 7: Configurando verificação periódica do firewall com cron..."
 
     # Criar diretorios dos scripts periodicos:
     # - intervalos curtos
@@ -122,7 +199,6 @@ echo "[PREPARE] Passo 6: Configurando verificação periódica do firewall com c
     mkdir -p /etc/cron.friday
     mkdir -p /etc/cron.saturday
     mkdir -p /etc/cron.sunday
-
 
 # Criar config de contrab
 (
@@ -152,7 +228,10 @@ crontab -l
 # Cria o arquivo de log para o script de verificação
 touch /var/log/docker-hook-check.log
 
-### 6. Configuração do Cron (Verificação Periódica) ###
+### 8. Usando o Cron (Verificação de 1 em 1 min) ###
+
+echo "[PREPARE] Passo 8: Colocando o docker-firewall-check no /etc/cron.1min."
+
 CRON_SCRIPT_NAME="docker-firewall-check"
 CRON_SCRIPT_PATH="/etc/cron.1min/${CRON_SCRIPT_NAME}"
 
@@ -161,8 +240,6 @@ cat <<EOF | tee "${CRON_SCRIPT_PATH}"
 #!/bin/bash
 # Este script verifica se a regra principal do firewall existe.
 # Se não existir, ele executa o hook principal para recriar tudo.
-
-"Script de verificação de firewall executado em $(date)" >> /var/log/docker-hook-check.log
 
 SENTINEL_COMMENT="DOCKER_FORWARD_ACCEPT_RULE"
 RULE_COUNT=\$(nft list ruleset 2>/dev/null | grep "\$SENTINEL_COMMENT" | wc -l)
