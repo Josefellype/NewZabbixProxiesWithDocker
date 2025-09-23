@@ -1,0 +1,41 @@
+Só funciona se o pacote resolvconf estiver instalado{
+    nano /etc/network/interfaces
+        Muda a config de dns:
+            dns-nameservers 45.235.162.178 8.8.8.8
+    systemctl restart networking
+} else{
+    Caso não funcione pelo fato do pacote resolvconf não estar instalado e o serviço moderno systemd-resolved 
+    não estar gerenciando ativamente o DNS (se o systemd-resolved estiver gerenciando a alteração será desfeita após a reinicialização do SO)
+    
+    Então é só alterar o arquivo /etc/resolv.conf{
+    nameserver 45.235.162.178
+    nameserver 8.8.8.8
+    }
+
+    Dessa forma as configurações de DNS são setadas estaticamente no arquivo resolv.conf. não importando as alterações de DNS feitas no /etc/network/interfaces
+    Caso queiro refletir essas alterações é preciso{
+    # Primeiro, instale o pacote
+    apt update
+    apt install resolvconf
+
+    # Depois, reinicie a rede para que ele aplique as configurações do /etc/network/interfaces
+    sudo systemctl restart networking.service
+    }
+}
+
+apt update && apt upgrade -y
+apt install openssh-server -y
+systemctl enable ssh --now
+systemctl status ssh
+
+nano /etc/ssh/sshd_config
+    Muda a config de ssh:
+        PermitRootLogin yes
+        PasswordAuthentication yes
+        PubkeyAuthentication yes
+        PermitEmptyPasswords no
+        Port 22
+        ListenAddress 0.0.0.0
+        MaxSessions 10
+
+systemctl restart ssh

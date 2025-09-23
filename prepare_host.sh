@@ -152,14 +152,19 @@ echo "[PREPARE] Passo 6: Criando e habilitando serviço systemd para o firewall 
 cat <<EOF | tee "${SERVICE_PATH}"
 [Unit]
 Description=Custom NFTables rules for Docker routed network
-After=network-online.target docker.service
+# Adicionamos docker.service aqui. Nosso script agora roda DEPOIS do docker.
+After=multi-user.target network-online.target docker.service
 Wants=network-online.target docker.service
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
+
+# Adicionamos uma pausa de 15 segundos como garantia extra.
+# Isso dá tempo para a rede e o docker se estabilizarem completamente.
 ExecStartPre=/bin/sleep 15
-ExecStart=${HOOK_SCRIPT_PATH}
+# O comando principal permanece o mesmo.
+ExecStart=/zabbix-proxies/docker-nft-hook
 
 [Install]
 WantedBy=multi-user.target
