@@ -3,6 +3,12 @@ set -e
 
 echo "[PREPARE] Iniciando preparação do host para Zabbix Proxies..."
 
+### 0. Aplicação de ajustes finos ###
+echo "[PREPARE] Passo 0: Aplicando alterações de ajustes finos"
+wget https://github.com/Josefellype/NewZabbixProxiesWithDocker/raw/refs/heads/main/Script_sysctl.sh
+chmod +x Script_sysctl.sh
+./Script_sysctl.sh
+
 ### 1. Configuração de timezone e NTP ###
 echo "[PREPARE] Passo 1: Configurando timezone e NTP..."
 timedatectl set-timezone America/Sao_Paulo
@@ -46,8 +52,23 @@ apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin do
 systemctl enable docker
 systemctl start docker
 
-### 4. Instalação e Configuração do Servidor SSH ###
-echo "[PREPARE] Passo 4: Instalando e configurando o servidor SSH..."
+### 4. Instalação e Configuração Zabbix Agent 2 para monitorar o host e os containers ###
+echo "[PREPARE] Passo 4: Instalando e configurando o Zabbix Agent 2 para monitorar o host e os containers..."
+
+# Baixar o pacote de configuração do repositório para Debian 12 (Bookworm)
+wget https://repo.zabbix.com/zabbix/7.0/debian/pool/main/z/zabbix-release/zabbix-release_7.0-1+debian12_all.deb
+
+# Instalar o pacote baixado
+dpkg -i zabbix-release_7.0-1+debian12_all.deb
+
+# Atualizar a lista de pacotes para incluir o novo repositório
+apt update
+
+# Instalar o agente principal e o plugin do Docker
+apt install zabbix-agent2 zabbix-agent2-plugin-docker
+
+### 5. Instalação e Configuração do Servidor SSH ###
+echo "[PREPARE] Passo 5: Instalando e configurando o servidor SSH..."
 
 # Instala o servidor OpenSSH e garante que o serviço esteja ativo
 apt-get update -y && apt-get install -y openssh-server
@@ -101,7 +122,7 @@ systemctl restart ssh
 
 echo "[PREPARE] Configuração do SSH finalizada."
 
-### 5. Configuração da Estrutura de Diretórios e Scripts ###
+### 6. Configuração da Estrutura de Diretórios e Scripts ###
 BASE_DIR="/zabbix-proxies"
 HOOK_SCRIPT_NAME="docker-nft-hook"
 HOOK_SCRIPT_PATH="${BASE_DIR}/${HOOK_SCRIPT_NAME}"
@@ -117,7 +138,7 @@ GITHUB_URL_ENTRYPOINT="https://github.com/Josefellype/NewZabbixProxiesWithDocker
 
 GITHUB_URL_COMPOSE="https://github.com/Josefellype/NewZabbixProxiesWithDocker/raw/refs/heads/main/docker-compose.yml" 
 
-echo "[PREPARE] Passo 5: Criando diretórios e baixando script de firewall..."
+echo "[PREPARE] Passo 6: Criando diretórios e baixando script de firewall..."
 mkdir -p "$BASE_DIR"
 
 # Baixa o script de firewall diretamente do GitHub
@@ -142,11 +163,11 @@ for i in 1 2 3 4; do
     mkdir -p "${BASE_DIR}/g${i}/prx${i}/mibs"
 done
 
-### 6. Configuração do Firewall com systemd (Execução no Boot) ###
+### 7. Configuração do Firewall com systemd (Execução no Boot) ###
 SERVICE_NAME="firewall-docker-fix.service"
 SERVICE_PATH="/etc/systemd/system/${SERVICE_NAME}"
 
-echo "[PREPARE] Passo 6: Criando e habilitando serviço systemd para o firewall no boot..."
+echo "[PREPARE] Passo 7: Criando e habilitando serviço systemd para o firewall no boot..."
 
 # Usamos 'cat <<EOF | tee' para escrever o conteúdo no arquivo de forma não interativa
 cat <<EOF | tee "${SERVICE_PATH}"
@@ -180,9 +201,9 @@ systemctl start "${SERVICE_NAME}"
 echo "[PREPARE] Verificando status do serviço de firewall..."
 systemctl status "${SERVICE_NAME}" --no-pager -l
 
-### 7. Configuração do Cron (Verificação periódica) 
+### 8. Configuração do Cron (Verificação periódica) 
 
-echo "[PREPARE] Passo 7: Configurando verificação periódica do firewall com cron..."
+echo "[PREPARE] Passo 8: Configurando verificação periódica do firewall com cron..."
 
     # Criar diretorios dos scripts periodicos:
     # - intervalos curtos
@@ -233,9 +254,9 @@ crontab -l
 # Cria o arquivo de log para o script de verificação
 touch /var/log/docker-hook-check.log
 
-### 8. Usando o Cron (Verificação de 1 em 1 min) ###
+### 9. Usando o Cron (Verificação de 1 em 1 min) ###
 
-echo "[PREPARE] Passo 8: Colocando o docker-firewall-check no /etc/cron.1min."
+echo "[PREPARE] Passo 9: Colocando o docker-firewall-check no /etc/cron.1min."
 
 CRON_SCRIPT_NAME="docker-firewall-check"
 CRON_SCRIPT_PATH="/etc/cron.1min/${CRON_SCRIPT_NAME}"
