@@ -1,6 +1,60 @@
 #!/bin/bash
 set -e
 
+# -- FUNÇÃO AUXILIAR PARA ALTERAR CONFIGURAÇÕES --
+# Esta função "upsert" (update or insert) torna nosso script mais limpo.
+# Argumento 1: Chave (ex: "Port")
+# Argumento 2: Valor (ex: "22")
+upsert_config() {
+    local config_file="$1"
+    local key="$2"
+    local value="$3"
+
+    echo "    -> Garantindo que '$key' seja '$value'..."
+
+    # Primeiro, tenta encontrar e substituir a linha existente (comentada ou não).
+    # A regex procura pelo início da linha (^), talvez um #, espaços, a chave, e substitui a linha toda.
+    sed -i.bak -E "s/^\s*#?\s*${key}\s+.*/${key} ${value}/" "${config_file}"
+
+    # Se, após a substituição, a linha ainda não existir, adiciona-a ao final do arquivo.
+    if ! grep -q -E "^\s*${key}\s+${value}" "${config_file}"; then
+        echo "${key} ${value}" >> "${config_file}"
+    fi
+}
+
+# Função para COMENTAR um parâmetro específico em um arquivo de configuração.
+# Argumento 1: Caminho do arquivo de configuração
+# Argumento 2: Chave do parâmetro a ser comentado
+comment_config() {
+    local config_file="$1"
+    local key="$2"
+
+    echo "    -> Garantindo que o parâmetro '$key' esteja comentado..."
+
+    # O comando sed procura por uma linha que COMEÇA com a chave (opcionalmente com espaços, mas sem '#')
+    # e a substitui pela mesma linha com um '#' e um espaço no início.
+    # O '&' na parte de substituição significa "a linha inteira que foi encontrada".
+    # Isso torna o comando idempotente: ele não adicionará '##' em linhas que já estão comentadas.
+    sed -i.bak -E "s/^\s*${key}\s+.*/# &/" "${config_file}"
+}
+
+# Função para DESCOMENTAR um parâmetro específico em um arquivo de configuração.
+# Argumento 1: Caminho do arquivo de configuração
+# Argumento 2: Chave do parâmetro a ser descomentado
+uncomment_config() {
+    local config_file="$1"
+    local key="$2"
+
+    echo "    -> Garantindo que o parâmetro '$key' esteja ativo (descomentado)..."
+
+    # O comando sed procura por uma linha que COMEÇA com '#' e a chave,
+    # captura tudo APÓS o '#' e os espaços, e substitui a linha inteira
+    # apenas pelo conteúdo capturado.
+    # Isso efetivamente remove o comentário.
+    # O comando é idempotente: ele não fará nada se a linha já estiver descomentada.
+    sed -i.bak -E "s/^\s*#\s*(${key}\s+.*)/\1/" "${config_file}"
+}
+
 echo "[PREPARE] Iniciando preparação do host para Zabbix Proxies..."
 
 ### 0. Aplicação de ajustes finos ###
@@ -67,6 +121,19 @@ apt update
 # Instalar o agente principal e o plugin do Docker
 apt install zabbix-agent2 zabbix-agent2-plugin-docker
 
+upsert_config "/etc/zabbix/zabbix_agent2.conf" "Server" "100.76.180.207,172.16.9.78"
+upsert_config "/etc/zabbix/zabbix_agent2.conf" "ServerActive" "100.76.180.207,172.16.9.78"
+comment_config "/etc/zabbix/zabbix_agent2.conf" "Hostname"
+uncomment_config "/etc/zabbix/zabbix_agent2.conf" "HostnameItem"
+
+usermod -aG docker zabbix
+
+systemctl restart zabbix-agent2
+
+systemctl enable zabbix-agent2
+
+systemctl status zabbix-agent2
+
 ### 5. Instalação e Configuração do Servidor SSH ###
 echo "[PREPARE] Passo 5: Instalando e configurando o servidor SSH..."
 
@@ -79,36 +146,15 @@ systemctl enable ssh --now
 # O '-n' garante que não vamos sobrescrever um backup existente.
 cp -n /etc/ssh/sshd_config /etc/ssh/sshd_config.orig
 
-# -- FUNÇÃO AUXILIAR PARA ALTERAR CONFIGURAÇÕES --
-# Esta função "upsert" (update or insert) torna nosso script mais limpo.
-# Argumento 1: Chave (ex: "Port")
-# Argumento 2: Valor (ex: "22")
-upsert_ssh_config() {
-    local key="$1"
-    local value="$2"
-    local config_file="/etc/ssh/sshd_config"
-
-    echo "    -> Garantindo que '$key' seja '$value'..."
-
-    # Primeiro, tenta encontrar e substituir a linha existente (comentada ou não).
-    # A regex procura pelo início da linha (^), talvez um #, espaços, a chave, e substitui a linha toda.
-    sed -i.bak -E "s/^\s*#?\s*${key}\s+.*/${key} ${value}/" "${config_file}"
-
-    # Se, após a substituição, a linha ainda não existir, adiciona-a ao final do arquivo.
-    if ! grep -q -E "^\s*${key}\s+${value}" "${config_file}"; then
-        echo "${key} ${value}" >> "${config_file}"
-    fi
-}
-
 # -- APLICAÇÃO DAS CONFIGURAÇÕES DESEJADAS --
 # Usamos a função para cada parâmetro que você especificou.
-upsert_ssh_config "PermitRootLogin" "yes"
-upsert_ssh_config "PasswordAuthentication" "yes"
-upsert_ssh_config "PubkeyAuthentication" "yes"
-upsert_ssh_config "PermitEmptyPasswords" "no"
-upsert_ssh_config "Port" "22"
-upsert_ssh_config "ListenAddress" "0.0.0.0"
-upsert_ssh_config "MaxSessions" "10"
+upsert_config "/etc/ssh/sshd_config" "PermitRootLogin" "yes"
+upsert_config "/etc/ssh/sshd_config" "PasswordAuthentication" "yes"
+upsert_config "/etc/ssh/sshd_config" "PubkeyAuthentication" "yes"
+upsert_config "/etc/ssh/sshd_config" "PermitEmptyPasswords" "no"
+upsert_config "/etc/ssh/sshd_config" "Port" "22"
+upsert_config "/etc/ssh/sshd_config" "ListenAddress" "0.0.0.0"
+upsert_config "/etc/ssh/sshd_config" "MaxSessions" "10"
 
 # -- VALIDAÇÃO E REINICIALIZAÇÃO DO SERVIÇO --
 echo "[PREPARE] Validando a nova configuração do SSH..."
