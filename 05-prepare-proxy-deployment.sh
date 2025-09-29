@@ -21,7 +21,7 @@ mkdir -p "$BASE_DIR"
 for filename in "${!FILES[@]}"; do
     url="${FILES[$filename]}"
     path="${BASE_DIR}/${filename}"
-    echo "[DEPLOY] Baixando ${filename}..."
+    echo "[DEPLOY] Baixando ${url} no caminho ${path}..."
     wget -q -O "$path" "$url"
 done
 
