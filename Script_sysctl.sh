@@ -45,3 +45,9 @@ kernel.threads-max = 512000
 
 # Reiniciar o sistema 3 segundos após um Kernel Panic
 kernel.panic = 3
+
+hostnamectl | grep -qi vmware && {
+    apt-get -y install open-vm-tools;
+    systemctl enable open-vm-tools;
+    systemctl start  open-vm-tools;
+}
