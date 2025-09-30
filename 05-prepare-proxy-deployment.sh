@@ -10,7 +10,6 @@ GITHUB_RAW_BASE="https://github.com/Josefellype/NewZabbixProxiesWithDocker/raw/r
 declare -A FILES=(
     ["docker-nft-hook"]="${GITHUB_RAW_BASE}/docker-nft-hook"
     ["Dockerfile"]="${GITHUB_RAW_BASE}/Dockerfile"
-    ["entrypoint.sh"]="${GITHUB_RAW_BASE}/entrypoint.sh"
     ["docker-compose.yml"]="${GITHUB_RAW_BASE}/docker-compose.yml"
 )
 
@@ -27,7 +26,6 @@ done
 
 # Torna os scripts executáveis
 chmod +x "${BASE_DIR}/docker-nft-hook"
-chmod +x "${BASE_DIR}/entrypoint.sh"
 
 # Loop para criar os subdiretórios dos volumes dos proxies
 echo "[DEPLOY] Criando estrutura de volumes..."

@@ -15,13 +15,3 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Editor de texto
     nano \
     && rm -rf /var/lib/apt/lists/*
-
-# Copia o entrypoint customizado que gerencia a inicialização do container
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
-# Define o entrypoint customizado como o comando de inicialização
-ENTRYPOINT ["/entrypoint.sh"]
-
-# Define o comando padrão
-CMD ["/usr/sbin/zabbix_proxy"]
