@@ -28,16 +28,16 @@ Criando o arquivo de serviço{
 Comandos para habilitar e iniciar o serviço:
 
 # Recarrega o systemd para ele encontrar o novo arquivo
-sudo systemctl daemon-reload
+systemctl daemon-reload
 
 # Habilita o serviço para iniciar no boot
-sudo systemctl enable firewall-docker-fix.service
+systemctl enable firewall-docker-fix.service
 
 # Inicia o serviço agora (mesmo efeito de rodar o script manualmente)
-sudo systemctl start firewall-docker-fix.service
+systemctl start firewall-docker-fix.service
 
 # Verifique se ele rodou sem erros
-sudo systemctl status firewall-docker-fix.service
+systemctl status firewall-docker-fix.service
 
 Aplicação de script para uso de crontab do Patrick{
     # Criar diretorios dos scripts periodicos:
