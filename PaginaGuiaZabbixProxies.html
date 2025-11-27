@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guia de Implantação: Zabbix Proxies com Docker</title>
+    <style>
+        :root {
+            --bg-color: #1a1d24;
+            --surface-color: #282c34;
+            --text-color: #abb2bf;
+            --header-color: #ffffff;
+            --primary-color: #61afef;
+            --accent-color: #56b6c2;
+            --success-color: #98c379;
+            --mono-font: 'Fira Code', 'Courier New', Courier, monospace;
+            --sans-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+        }
+
+        body {
+            font-family: var(--sans-font);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.7;
+            margin: 0;
+            padding: 0;
+            font-size: 16px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 1rem 2rem;
+            background-color: var(--surface-color);
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        header {
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 1rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        h1,
+        h2,
+        h3 {
+            color: var(--header-color);
+            font-weight: 600;
+            margin-top: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+        }
+
+        h2 {
+            font-size: 2rem;
+            border-bottom: 1px solid #444;
+            padding-bottom: 0.5rem;
+        }
+
+        h3 {
+            font-size: 1.5rem;
+            color: var(--accent-color);
+        }
+
+        a {
+            color: var(--primary-color);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        code {
+            font-family: var(--mono-font);
+            background-color: #353b45;
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        pre {
+            background-color: #21252b;
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            position: relative;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            border: 1px solid #3c4049;
+        }
+
+        pre code {
+            background-color: transparent;
+            padding: 0;
+            font-size: 0.95em;
+            line-height: 1.5;
+        }
+
+        pre .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #4f5663;
+            color: var(--header-color);
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: var(--sans-font);
+            font-size: 0.8em;
+            opacity: 0.7;
+            transition: opacity 0.2s, background-color 0.2s;
+        }
+
+        pre:hover .copy-btn {
+            opacity: 1;
+        }
+
+        pre .copy-btn:hover {
+            background-color: var(--primary-color);
+        }
+
+        ul,
+        ol {
+            padding-left: 20px;
+        }
+
+        li {
+            margin-bottom: 0.8rem;
+        }
+
+        .note {
+            background-color: rgba(97, 175, 239, 0.1);
+            border-left: 4px solid var(--primary-color);
+            padding: 1rem 1.5rem;
+            margin: 2rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .note strong {
+            color: var(--primary-color);
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #444;
+            font-size: 0.9em;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+                margin: 1rem;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            h2 {
+                font-size: 1.75rem;
+            }
+
+            h3 {
+                font-size: 1.25rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Guia de Implantação: Zabbix Proxies com Docker</h1>
+            <p>Documento padronizado para a configuração de um novo host de Zabbix Proxies.</p>
+        </header>
+
+        <main>
+            <section id="overview">
+                <h2>1. Visão Geral</h2>
+                <p>Este documento descreve o processo para implantar um novo host de Zabbix Proxies. O objetivo é
+                    configurar uma máquina <strong>Debian 12 (Bookworm)</strong> para executar 4 contêineres Docker,
+                    cada um operando como um Zabbix Proxy com banco de dados SQLite. A automação é realizada através de
+                    um conjunto de scripts que preparam o ambiente, e a configuração dos proxies é gerenciada de forma
+                    declarativa através de um arquivo <code>docker-compose.yml</code>.</p>
+            </section>
+
+            <section id="file-structure">
+                <h2>2. Estrutura de Arquivos do Projeto</h2>
+                <p>O processo de implantação depende de um conjunto de arquivos. É importante entender o papel de cada
+                    um:</p>
+                <ul>
+                    <li><strong><code>prepare_host.sh</code> (Script Mestre):</strong> O orquestrador principal. Baixa e
+                        executa todos os outros módulos de script na ordem correta.</li>
+                    <li><strong><code>00</code> a <code>06</code> (Módulos):</strong> Scripts especializados que cuidam
+                        de tarefas como instalar o Docker, configurar o SSH, ajustar o kernel, etc.</li>
+                    <li><strong><code>docker-compose.yml</code>:</strong> O arquivo central para a configuração dos
+                        proxies. Define os 4 serviços de contêineres, suas redes, volumes e todas as configurações do
+                        Zabbix via variáveis de ambiente.</li>
+                    <li><strong><code>Dockerfile</code>:</strong> Define a imagem Docker customizada para os proxies,
+                        adicionando ferramentas de diagnóstico (<code>ping</code>, <code>nano</code>, etc.) à imagem
+                        oficial do Zabbix.</li>
+                    <li><strong><code>docker-nft-hook</code>:</strong> Um script auxiliar para corrigir a comunicação de
+                        rede do Docker em sistemas que usam <code>nftables</code>.</li>
+                </ul>
+            </section>
+
+            <section id="deployment-steps">
+                <h2>3. Passo a Passo da Implantação</h2>
+                <p>Siga estes passos a partir de uma máquina virtual Debian 12 recém-instalada, com acesso root e à
+                    internet.</p>
+
+                <h3>Passo 3.1: Configuração Inicial de Rede (Manual)</h3>
+                <p>Antes de executar qualquer script, é fundamental garantir que o servidor consiga resolver nomes de
+                    domínio para baixar os arquivos necessários. Existem duas maneiras principais de configurar o DNS em
+                    um servidor Debian, dependendo de como a rede está gerenciada.</p>
+
+                <h4>Método 1: Configuração Persistente (Recomendado)</h4>
+                <p>Este método é o ideal para garantir que as configurações de DNS sobrevivam a reinicializações. Ele
+                    depende do pacote <code>resolvconf</code> para gerenciar o arquivo <code>/etc/resolv.conf</code>
+                    automaticamente a partir das configurações de interface.</p>
+                <ol>
+                    <li>
+                        <strong>Verifique se o <code>resolvconf</code> está instalado.</strong> Se este comando retornar
+                        algo, ele está presente:
+                        <pre><code class="language-bash">dpkg -l | grep resolvconf</code><button class="copy-btn">Copiar</button></pre>
+                    </li>
+                    <li>
+                        Se estiver instalado, edite o arquivo de interfaces de rede:
+                        <pre><code class="language-bash">nano /etc/network/interfaces</code><button class="copy-btn">Copiar</button></pre>
+                    </li>
+                    <li>
+                        Adicione ou modifique a linha <code>dns-nameservers</code> na configuração da sua interface de
+                        rede principal (ex: <code>ens160</code>):
+                        <pre><code class="language-text"># Exemplo de configuração de interface
+auto ens160
+iface ens160 inet static
+    address 192.168.1.10
+    netmask 255.255.255.0
+    gateway 192.168.1.1
+    dns-nameservers 45.235.162.178 8.8.8.8</code><button class="copy-btn">Copiar</button></pre>
+                    </li>
+                    <li>
+                        Salve o arquivo e reinicie o serviço de rede para aplicar as alterações:
+                        <pre><code class="language-bash">systemctl restart networking.service</code><button class="copy-btn">Copiar</button></pre>
+                    </li>
+                </ol>
+
+                <h4>Método 2: Configuração Direta (Rápida ou Fallback)</h4>
+                <p>Utilize este método para uma configuração rápida ou se o sistema não utiliza o
+                    <code>resolvconf</code>.</p>
+                <ol>
+                    <li>Edite diretamente o arquivo <code>/etc/resolv.conf</code>:
+                        <pre><code class="language-bash">nano /etc/resolv.conf</code><button class="copy-btn">Copiar</button></pre>
+                    </li>
+                    <li>Adicione os nameservers e salve o arquivo. O sistema usará estas configurações imediatamente.
+                        <pre><code class="language-text">nameserver 45.235.162.178
+nameserver 8.8.8.8</code><button class="copy-btn">Copiar</button></pre>
+                    </li>
+                </ol>
+
+                <div class="note">
+                    <strong>Atenção sobre a Persistência do Método 2:</strong><br>
+                    Em sistemas Debian modernos, o arquivo <code>/etc/resolv.conf</code> é frequentemente gerenciado por
+                    outros serviços (como <code>systemd-resolved</code> ou <code>resolvconf</code>) e pode ser
+                    sobrescrito a cada reinicialização. Editar este arquivo diretamente pode resultar em uma
+                    configuração <strong>não permanente</strong>.
+                    <p>Se suas alterações no <code>/etc/resolv.conf</code> desaparecem após reiniciar e você deseja usar
+                        o Método 1, instale o <code>resolvconf</code> e reinicie a rede:</p>
+                    <pre><code class="language-bash"># Instala o pacote
+apt update && apt install -y resolvconf
+
+# Reinicia a rede para aplicar as configurações de /etc/network/interfaces
+systemctl restart networking.service</code><button class="copy-btn">Copiar</button></pre>
+                </div>
+
+                <h4>Passo Final: Instalação do Wget</h4>
+                <p>Após garantir que a resolução de DNS está funcionando (você pode testar com
+                    <code>ping google.com</code>), instale o <code>wget</code>, que é necessário para o próximo passo.
+                </p>
+                <pre><code class="language-bash">apt install -y wget</code><button class="copy-btn">Copiar</button></pre>
+
+                <h3>Passo 3.2: Download e Execução do Script de Preparação</h3>
+                <p>O script mestre <code>prepare_host.sh</code> irá automatizar toda a preparação do ambiente.</p>
+                <ol>
+                    <li>Baixe e execute o script com um único comando:
+                        <pre><code class="language-bash">wget -O prepare_host.sh https://github.com/Josefellype/NewZabbixProxiesWithDocker/raw/refs/heads/main/prepare_host.sh && chmod +x prepare_host.sh && ./prepare_host.sh</code><button class="copy-btn">Copiar</button></pre>
+                    </li>
+                    <li>Aguarde a finalização. O script irá instalar Docker, Zabbix Agent 2, configurar o sistema e
+                        baixar todos os arquivos do projeto para o diretório <code>/zabbix-proxies</code>.</li>
+                </ol>
+
+                <h3>Passo 3.3: Personalização do Ambiente (Manual)</h3>
+                <p>Esta é a etapa que requer edição manual para adaptar a implantação ao novo ambiente.</p>
+                <ol>
+                    <li>Navegue até o diretório do projeto:
+                        <pre><code class="language-bash">cd /zabbix-proxies</code><button class="copy-btn">Copiar</button></pre>
+                    </li>
+                    <li>Edite o arquivo <code>docker-compose.yml</code>:
+                        <pre><code class="language-bash">nano docker-compose.yml</code><button class="copy-btn">Copiar</button></pre>
+                    </li>
+                    <li><strong>Ajuste os seguintes parâmetros conforme necessário:</strong>
+                        <ul>
+                            <li><strong>Rede:</strong> Na seção <code>networks.zabbix_proxy_net.ipam.config</code>,
+                                altere o <code>subnet</code> e <code>gateway</code> para a faixa de IPs que será usada
+                                pelos contêineres nesta máquina.</li>
+                            <li><strong>Para cada proxy (<code>prx1</code>, <code>prx2</code>, ...):</strong>
+                                <ul>
+                                    <li><code>networks.zabbix_proxy_net.ipv4_address</code>: Defina o IP estático do
+                                        contêiner.</li>
+                                    <li><code>container_name</code>: Altere para um nome único e descritivo.</li>
+                                    <li><code>environment.ZBX_HOSTNAME</code>: Altere para o nome <strong>exato</strong>
+                                        que este proxy terá no frontend do Zabbix. Este nome deve ser único em toda a
+                                        infraestrutura.</li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                </ol>
+                <div class="note">
+                    <strong>Atenção:</strong> Certifique-se de que os parâmetros no `docker-compose.yml` estão corretos
+                    e sem duplicatas. O separador para múltiplos servidores em <code>ZBX_SERVER_HOST</code> é o
+                    <strong>ponto e vírgula (<code>;</code>)</strong>, e valores numéricos como
+                    <code>ZBX_PROXYOFFLINEBUFFER</code> não devem conter letras (use <code>24</code>, não
+                    <code>24h</code>).
+                </div>
+
+                <h3>Passo 3.4: Subindo os Contêineres</h3>
+                <p>Após personalizar o <code>docker-compose.yml</code>, você está pronto para iniciar os proxies.</p>
+                <ol>
+                    <li>Execute o Docker Compose (no diretório <code>/zabbix-proxies</code>):
+                        <pre><code class="language-bash"> docker compose up -d --build</code><button class="copy-btn">Copiar</button></pre>
+                        <ul>
+                            <li><code>--build</code>: Constrói a imagem customizada na primeira execução.</li>
+                            <li><code>-d</code>: Inicia os contêineres em segundo plano.</li>
+                        </ul>
+                    </li>
+                </ol>
+
+                <h3>Passo 3.5: Verificação Pós-Implantação</h3>
+                <p>Verifique se os 4 contêineres estão em execução e saudáveis.</p>
+                <ol>
+                    <li>Listar contêineres ativos:
+                        <pre><code class="language-bash"> docker ps</code><button class="copy-btn">Copiar</button></pre>
+                        <p>Você deve ver os 4 proxies com o status "Up" ou "Running".</p>
+                    </li>
+                    <li>Verificar os logs de um dos proxies:
+                        <pre><code class="language-bash"> docker logs zabbix-proxy1-stda-g1</code><button class="copy-btn">Copiar</button></pre>
+                        <p>Procure por mensagens indicando que o proxy se conectou com sucesso ao Zabbix Server.</p>
+                    </li>
+                </ol>
+            </section>
+        </main>
+
+        <footer>
+            <p>Documentação gerada em 30 de Setembro de 2025. Baseado no projeto de automação de Zabbix Proxies.</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const copyButtons = document.querySelectorAll('.copy-btn');
+            copyButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const pre = button.parentElement;
+                    const code = pre.querySelector('code');
+                    const textToCopy = code.innerText;
+
+                    navigator.clipboard.writeText(textToCopy).then(() => {
+                        const originalText = button.innerText;
+                        button.innerText = 'Copiado!';
+                        button.style.backgroundColor = 'var(--success-color)';
+                        setTimeout(() => {
+                            button.innerText = originalText;
+                            button.style.backgroundColor = '';
+                        }, 2000);
+                    }).catch(err => {
+                        console.error('Falha ao copiar texto: ', err);
+                    });
+                });
+            });
+        });
+    </script>
+</body>
+
+</html>

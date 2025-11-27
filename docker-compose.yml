@@ -11,6 +11,19 @@ networks:
           gateway: 172.16.3.1
 
 services:
+  prx1_db:
+      image: postgres:13-alpine
+      container_name: zabbix-proxy1-db
+      networks:
+        zabbix_proxy_net:
+          ipv4_address: 172.16.3.6 # Novo IP para o DB
+      environment:
+        - POSTGRES_DB=zabbix_proxy
+        - POSTGRES_USER=zabbix
+        - POSTGRES_PASSWORD=zabbix_db_prx1
+      volumes:
+        - ./g1/prx1/postgres_data:/var/lib/postgresql/data
+      restart: unless-stopped
   prx1:
     build: .
     container_name: "zabbix-proxy1-stda-g1"
@@ -25,16 +38,16 @@ services:
       - ZBX_DEBUGLEVEL=3
       - ZBX_ENABLEREMOTECOMMANDS=1
       - ZBX_PROXYLOCALBUFFER=0
-      - ZBX_PROXYCONFIGFREQUENCY=10
+      - ZBX_PROXYCONFIGFREQUENCY=300
       - ZBX_DATASENDERFREQUENCY=1
-      - ZBX_PROXYMEMORYBUFFERSIZE=1G
-      - ZBX_STARTPOLLERS=170
+      - ZBX_PROXYMEMORYBUFFERSIZE=64M
+      - ZBX_STARTPOLLERS=30
       - ZBX_MAXCONCURRENTCHECKSPERPOLLER=1000
-      - ZBX_STARTDISCOVERERS=3
+      - ZBX_STARTDISCOVERERS=1
       - ZBX_HOUSEKEEPINGFREQUENCY=1
-      - ZBX_HISTORYCACHESIZE=128M
-      - ZBX_STARTDBSYNCERS=4
-      - ZBX_HISTORYINDEXCACHESIZE=32M
+      - ZBX_HISTORYCACHESIZE=30M
+      - ZBX_STARTDBSYNCERS=2
+      - ZBX_HISTORYINDEXCACHESIZE=8M
       - ZBX_TIMEOUT=30
       - ZBX_UNREACHABLEPERIOD=45
       - ZBX_UNAVAILABLEDELAY=60
@@ -42,12 +55,18 @@ services:
       - ZBX_LOGSLOWQUERIES=3000
       - ZBX_STATSALLOWEDIP=127.0.0.1
       - ZBX_PROXYBUFFERMODE=hybrid
-      - ZBX_STARTSNMPPOLLERS=160
-      - ZBX_STARTPREPROCESSORS=15
-      - ZBX_STARTPOLLERSUNREACHABLE=30
-      - ZBX_STARTPINGERS=15
-      - ZBX_CACHESIZE=256M
+      - ZBX_STARTSNMPPOLLERS=30
+      - ZBX_STARTPREPROCESSORS=4
+      - ZBX_STARTPOLLERSUNREACHABLE=20
+      - ZBX_STARTPINGERS=4
+      - ZBX_CACHESIZE=60M
       - ZBX_PROXYOFFLINEBUFFER=24
+      - ZBX_DB_TYPE=postgresql
+      - ZBX_DB_HOST=172.16.3.6
+      - ZBX_DB_PORT=5432
+      - ZBX_DB_NAME=zabbix_proxy
+      - ZBX_DB_USER=zabbix
+      - ZBX_DB_PASSWORD=zabbix_db_prx1
     ulimits:
       nofile:
         soft: 65536
@@ -56,7 +75,7 @@ services:
         soft: 65536
         hard: 65536
     volumes:
-      - ./g1/prx1/db_data:/var/lib/zabbix/db_data
+      #- ./g1/prx1/db_data:/var/lib/zabbix/db_data
       - ./g1/prx1/alertscripts:/usr/lib/zabbix/alertscripts
       - ./g1/prx1/externalscripts:/usr/lib/zabbix/externalscripts
       - ./g1/prx1/enc:/var/lib/zabbix/enc
@@ -65,6 +84,19 @@ services:
       - NET_ADMIN
       - NET_RAW
 
+  prx2_db:
+      image: postgres:13-alpine
+      container_name: zabbix-proxy2-db
+      networks:
+        zabbix_proxy_net:
+          ipv4_address: 172.16.3.7 # Novo IP para o DB
+      environment:
+        - POSTGRES_DB=zabbix_proxy
+        - POSTGRES_USER=zabbix
+        - POSTGRES_PASSWORD=zabbix_db_prx2
+      volumes:
+        - ./g2/prx2/postgres_data:/var/lib/postgresql/data
+      restart: unless-stopped
   prx2:
     build: .
     container_name: "zabbix-proxy2-stda-g2"
@@ -79,16 +111,16 @@ services:
       - ZBX_DEBUGLEVEL=3
       - ZBX_ENABLEREMOTECOMMANDS=1
       - ZBX_PROXYLOCALBUFFER=0
-      - ZBX_PROXYCONFIGFREQUENCY=10
+      - ZBX_PROXYCONFIGFREQUENCY=300
       - ZBX_DATASENDERFREQUENCY=1
-      - ZBX_PROXYMEMORYBUFFERSIZE=1G
-      - ZBX_STARTPOLLERS=170
+      - ZBX_PROXYMEMORYBUFFERSIZE=64M
+      - ZBX_STARTPOLLERS=30
       - ZBX_MAXCONCURRENTCHECKSPERPOLLER=1000
-      - ZBX_STARTDISCOVERERS=3
+      - ZBX_STARTDISCOVERERS=1
       - ZBX_HOUSEKEEPINGFREQUENCY=1
-      - ZBX_HISTORYCACHESIZE=128M
-      - ZBX_STARTDBSYNCERS=4
-      - ZBX_HISTORYINDEXCACHESIZE=32M
+      - ZBX_HISTORYCACHESIZE=30M
+      - ZBX_STARTDBSYNCERS=2
+      - ZBX_HISTORYINDEXCACHESIZE=8M
       - ZBX_TIMEOUT=30
       - ZBX_UNREACHABLEPERIOD=45
       - ZBX_UNAVAILABLEDELAY=60
@@ -96,12 +128,18 @@ services:
       - ZBX_LOGSLOWQUERIES=3000
       - ZBX_STATSALLOWEDIP=127.0.0.1
       - ZBX_PROXYBUFFERMODE=hybrid
-      - ZBX_STARTSNMPPOLLERS=160
-      - ZBX_STARTPREPROCESSORS=15
-      - ZBX_STARTPOLLERSUNREACHABLE=30
-      - ZBX_STARTPINGERS=15
-      - ZBX_CACHESIZE=256M
+      - ZBX_STARTSNMPPOLLERS=30
+      - ZBX_STARTPREPROCESSORS=4
+      - ZBX_STARTPOLLERSUNREACHABLE=20
+      - ZBX_STARTPINGERS=4
+      - ZBX_CACHESIZE=60M
       - ZBX_PROXYOFFLINEBUFFER=24
+      - ZBX_DB_TYPE=postgresql
+      - ZBX_DB_HOST=172.16.3.7
+      - ZBX_DB_PORT=5432
+      - ZBX_DB_NAME=zabbix_proxy
+      - ZBX_DB_USER=zabbix
+      - ZBX_DB_PASSWORD=zabbix_db_prx2
     ulimits:
       nofile:
         soft: 65536
@@ -110,7 +148,7 @@ services:
         soft: 65536
         hard: 65536
     volumes:
-      - ./g2/prx2/db_data:/var/lib/zabbix/db_data
+      #- ./g2/prx2/db_data:/var/lib/zabbix/db_data
       - ./g2/prx2/alertscripts:/usr/lib/zabbix/alertscripts
       - ./g2/prx2/externalscripts:/usr/lib/zabbix/externalscripts
       - ./g2/prx2/enc:/var/lib/zabbix/enc
@@ -119,6 +157,19 @@ services:
       - NET_ADMIN
       - NET_RAW
 
+  prx3_db:
+      image: postgres:13-alpine
+      container_name: zabbix-proxy3-db
+      networks:
+        zabbix_proxy_net:
+          ipv4_address: 172.16.3.8 # Novo IP para o DB
+      environment:
+        - POSTGRES_DB=zabbix_proxy
+        - POSTGRES_USER=zabbix
+        - POSTGRES_PASSWORD=zabbix_db_prx3
+      volumes:
+        - ./g3/prx3/postgres_data:/var/lib/postgresql/data
+      restart: unless-stopped
   prx3:
     build: .
     container_name: "zabbix-proxy3-stda-g3"
@@ -133,16 +184,16 @@ services:
       - ZBX_DEBUGLEVEL=3
       - ZBX_ENABLEREMOTECOMMANDS=1
       - ZBX_PROXYLOCALBUFFER=0
-      - ZBX_PROXYCONFIGFREQUENCY=10
+      - ZBX_PROXYCONFIGFREQUENCY=300
       - ZBX_DATASENDERFREQUENCY=1
-      - ZBX_PROXYMEMORYBUFFERSIZE=1G
-      - ZBX_STARTPOLLERS=170
+      - ZBX_PROXYMEMORYBUFFERSIZE=64M
+      - ZBX_STARTPOLLERS=30
       - ZBX_MAXCONCURRENTCHECKSPERPOLLER=1000
-      - ZBX_STARTDISCOVERERS=3
+      - ZBX_STARTDISCOVERERS=1
       - ZBX_HOUSEKEEPINGFREQUENCY=1
-      - ZBX_HISTORYCACHESIZE=128M
-      - ZBX_STARTDBSYNCERS=4
-      - ZBX_HISTORYINDEXCACHESIZE=32M
+      - ZBX_HISTORYCACHESIZE=30M
+      - ZBX_STARTDBSYNCERS=2
+      - ZBX_HISTORYINDEXCACHESIZE=8M
       - ZBX_TIMEOUT=30
       - ZBX_UNREACHABLEPERIOD=45
       - ZBX_UNAVAILABLEDELAY=60
@@ -150,12 +201,18 @@ services:
       - ZBX_LOGSLOWQUERIES=3000
       - ZBX_STATSALLOWEDIP=127.0.0.1
       - ZBX_PROXYBUFFERMODE=hybrid
-      - ZBX_STARTSNMPPOLLERS=160
-      - ZBX_STARTPREPROCESSORS=15
-      - ZBX_STARTPOLLERSUNREACHABLE=30
-      - ZBX_STARTPINGERS=15
-      - ZBX_CACHESIZE=256M
+      - ZBX_STARTSNMPPOLLERS=30
+      - ZBX_STARTPREPROCESSORS=4
+      - ZBX_STARTPOLLERSUNREACHABLE=20
+      - ZBX_STARTPINGERS=4
+      - ZBX_CACHESIZE=60M
       - ZBX_PROXYOFFLINEBUFFER=24
+      - ZBX_DB_TYPE=postgresql
+      - ZBX_DB_HOST=172.16.3.8
+      - ZBX_DB_PORT=5432
+      - ZBX_DB_NAME=zabbix_proxy
+      - ZBX_DB_USER=zabbix
+      - ZBX_DB_PASSWORD=zabbix_db_prx3
     ulimits:
       nofile:
         soft: 65536
@@ -164,7 +221,7 @@ services:
         soft: 65536
         hard: 65536
     volumes:
-      - ./g3/prx3/db_data:/var/lib/zabbix/db_data
+      #- ./g3/prx3/db_data:/var/lib/zabbix/db_data
       - ./g3/prx3/alertscripts:/usr/lib/zabbix/alertscripts
       - ./g3/prx3/externalscripts:/usr/lib/zabbix/externalscripts
       - ./g3/prx3/enc:/var/lib/zabbix/enc
@@ -173,6 +230,19 @@ services:
       - NET_ADMIN
       - NET_RAW
 
+  prx4_db:
+      image: postgres:13-alpine
+      container_name: zabbix-proxy4-db
+      networks:
+        zabbix_proxy_net:
+          ipv4_address: 172.16.3.9 # Novo IP para o DB
+      environment:
+        - POSTGRES_DB=zabbix_proxy
+        - POSTGRES_USER=zabbix
+        - POSTGRES_PASSWORD=zabbix_db_prx4
+      volumes:
+        - ./g4/prx4/postgres_data:/var/lib/postgresql/data
+      restart: unless-stopped
   prx4:
     build: .
     container_name: "zabbix-proxy4-stda-g4"
@@ -187,16 +257,16 @@ services:
       - ZBX_DEBUGLEVEL=3
       - ZBX_ENABLEREMOTECOMMANDS=1
       - ZBX_PROXYLOCALBUFFER=0
-      - ZBX_PROXYCONFIGFREQUENCY=10
+      - ZBX_PROXYCONFIGFREQUENCY=300
       - ZBX_DATASENDERFREQUENCY=1
-      - ZBX_PROXYMEMORYBUFFERSIZE=1G
-      - ZBX_STARTPOLLERS=170
+      - ZBX_PROXYMEMORYBUFFERSIZE=64M
+      - ZBX_STARTPOLLERS=30
       - ZBX_MAXCONCURRENTCHECKSPERPOLLER=1000
-      - ZBX_STARTDISCOVERERS=3
+      - ZBX_STARTDISCOVERERS=1
       - ZBX_HOUSEKEEPINGFREQUENCY=1
-      - ZBX_HISTORYCACHESIZE=128M
-      - ZBX_STARTDBSYNCERS=4
-      - ZBX_HISTORYINDEXCACHESIZE=32M
+      - ZBX_HISTORYCACHESIZE=30M
+      - ZBX_STARTDBSYNCERS=2
+      - ZBX_HISTORYINDEXCACHESIZE=8M
       - ZBX_TIMEOUT=30
       - ZBX_UNREACHABLEPERIOD=45
       - ZBX_UNAVAILABLEDELAY=60
@@ -204,12 +274,18 @@ services:
       - ZBX_LOGSLOWQUERIES=3000
       - ZBX_STATSALLOWEDIP=127.0.0.1
       - ZBX_PROXYBUFFERMODE=hybrid
-      - ZBX_STARTSNMPPOLLERS=160
-      - ZBX_STARTPREPROCESSORS=15
-      - ZBX_STARTPOLLERSUNREACHABLE=30
-      - ZBX_STARTPINGERS=15
-      - ZBX_CACHESIZE=256M
+      - ZBX_STARTSNMPPOLLERS=30
+      - ZBX_STARTPREPROCESSORS=4
+      - ZBX_STARTPOLLERSUNREACHABLE=20
+      - ZBX_STARTPINGERS=4
+      - ZBX_CACHESIZE=60M
       - ZBX_PROXYOFFLINEBUFFER=24
+      - ZBX_DB_TYPE=postgresql
+      - ZBX_DB_HOST=172.16.3.9
+      - ZBX_DB_PORT=5432
+      - ZBX_DB_NAME=zabbix_proxy
+      - ZBX_DB_USER=zabbix
+      - ZBX_DB_PASSWORD=zabbix_db_prx4
     ulimits:
       nofile:
         soft: 65536
@@ -218,7 +294,7 @@ services:
         soft: 65536
         hard: 65536
     volumes:
-      - ./g4/prx4/db_data:/var/lib/zabbix/db_data
+      #- ./g4/prx4/db_data:/var/lib/zabbix/db_data
       - ./g4/prx4/alertscripts:/usr/lib/zabbix/alertscripts
       - ./g4/prx4/externalscripts:/usr/lib/zabbix/externalscripts
       - ./g4/prx4/enc:/var/lib/zabbix/enc
