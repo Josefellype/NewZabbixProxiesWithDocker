@@ -25,6 +25,8 @@ SCRIPTS_TO_DOWNLOAD=(
     "04-install-zabbix-agent.sh"
     "05-prepare-proxy-deployment.sh"
     "06-configure-firewall.sh"
+    "07-configure-frr.sh"
+    "08-configure-netbird-routes.sh"
 )
 
 # --- Etapa 1: Download de todos os Módulos ---
@@ -54,6 +56,8 @@ MODULES_TO_EXECUTE=(
     "04-install-zabbix-agent.sh"
     "05-prepare-proxy-deployment.sh"
     "06-configure-firewall.sh"
+    "07-configure-frr.sh"
+    "08-configure-netbird-routes.sh"
 )
 
 for module in "${MODULES_TO_EXECUTE[@]}"; do
@@ -70,8 +74,11 @@ echo -e "\n=========================================================="
 echo "== Host preparado com sucesso! =="
 echo "----------------------------------------------------"
 echo "Próximos Passos Recomendados:"
-echo "1. Reinicie o host para garantir que os serviços de boot (firewall, docker) funcionem: 'systemctl reboot'"
-echo "2. Após reiniciar, navegue para /zabbix-proxies e suba os containers: 'docker compose up -d --build'"
+echo "1. Edite o arquivo de configuração do FRR: nano /zabbix-proxies/frr.env"
+echo "2. Execute o módulo FRR para gerar o frr.conf: bash /zabbix-proxies/07-configure-frr.sh (ou re-execute este orquestrador)"
+echo "3. Reinicie o host para garantir que todos os serviços de boot funcionem: 'systemctl reboot'"
+echo "4. Após reiniciar, navegue para /zabbix-proxies e suba os containers: 'docker compose up -d --build'"
+echo "5. O serviço zabbix-routes irá detectar os IPs Netbird e injetá-los automaticamente no FRR."
 echo "----------------------------------------------------"
 echo "Limpando diretório de scripts temporários: ${SCRIPT_DIR}"
 cd /

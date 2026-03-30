@@ -1,0 +1,61 @@
+!
+frr version 10.3.1_git
+frr defaults traditional
+hostname __FRR_HOSTNAME__
+log syslog informational
+no ipv6 forwarding
+!
+route-map EXPORT-IPV4 permit 65535
+exit
+!
+route-map IMPORT-IPV4 permit 65535
+exit
+!
+ip router-id __ROUTER_ID__
+!
+bfd
+ profile RRPEERS
+  detect-multiplier 4
+  transmit-interval 250
+  receive-interval 250
+  minimum-ttl 1
+ exit
+exit
+!
+router bgp __LOCAL_ASN__
+ bgp router-id __ROUTER_ID__
+ bgp suppress-fib-pending
+ bgp log-neighbor-changes
+ bgp always-compare-med
+ no bgp default ipv4-unicast
+ no bgp ebgp-requires-policy
+ bgp deterministic-med
+ bgp bestpath as-path multipath-relax
+ bgp bestpath med confed missing-as-worst
+ no bgp network import-check
+ neighbor RRPEERSV4 peer-group
+ neighbor RRPEERSV4 remote-as __REMOTE_ASN__
+ neighbor RRPEERSV4 ebgp-multihop 255
+ neighbor RRPEERSV4 description RR-OpenPeers-IPv4
+ neighbor RRPEERSV4 bfd
+ neighbor RRPEERSV4 bfd profile RRPEERS
+ neighbor RRPEERSV4 update-source __ROUTER_ID__
+ neighbor RRPEERSV4 timers 3 12
+ bgp listen range 172.16.0.0/12 peer-group RRPEERSV4
+ bgp listen range 100.64.0.0/10 peer-group RRPEERSV4
+ bgp listen range 10.0.0.0/8 peer-group RRPEERSV4
+ bgp listen range 198.18.0.0/15 peer-group RRPEERSV4
+ neighbor __BGP_NEIGHBOR__ peer-group RRPEERSV4
+ !
+ address-family ipv4 unicast
+  network __PROXY_SUBNET__
+  neighbor RRPEERSV4 activate
+  neighbor RRPEERSV4 soft-reconfiguration inbound
+  neighbor RRPEERSV4 route-map IMPORT-IPV4 in
+  neighbor RRPEERSV4 route-map EXPORT-IPV4 out
+  maximum-paths 64
+  maximum-paths ibgp 64
+ exit-address-family
+exit
+!
+end

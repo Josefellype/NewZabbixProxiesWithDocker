@@ -1,0 +1,13 @@
+[Unit]
+Description=Rotas Estaticas para Zabbix Proxies (Netbird)
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/zabbix-netbird-routes.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

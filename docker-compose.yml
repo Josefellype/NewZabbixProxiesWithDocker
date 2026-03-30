@@ -2,39 +2,37 @@ networks:
   zabbix_proxy_net:
     driver: bridge
     driver_opts:
-      com.docker.network.bridge.enable_ip_masquerade: "false" 
+      com.docker.network.bridge.enable_ip_masquerade: "false"
       com.docker.network.bridge.enable_icc: "true"
     ipam:
       driver: default
       config:
-        - subnet: 172.16.3.0/28
-          gateway: 172.16.3.1
+        - subnet: 172.16.3.48/28
+          gateway: 172.16.3.49
 
 services:
-  prx1_db:
-      image: postgres:13-alpine
-      container_name: zabbix-proxy1-db
-      networks:
-        zabbix_proxy_net:
-          ipv4_address: 172.16.3.6 # Novo IP para o DB
-      environment:
-        - POSTGRES_DB=zabbix_proxy
-        - POSTGRES_USER=zabbix
-        - POSTGRES_PASSWORD=zabbix_db_prx1
-      volumes:
-        - ./g1/prx1/postgres_data:/var/lib/postgresql/data
-      restart: unless-stopped
+  frr-router:
+    image: quay.io/frrouting/frr:10.3.1
+    container_name: frr-bgp-lem
+    restart: unless-stopped
+    network_mode: host
+    privileged: true
+    volumes:
+      - ./frr/daemons:/etc/frr/daemons
+      - ./frr/frr.conf:/etc/frr/frr.conf
   prx1:
-    build: .
-    container_name: "zabbix-proxy1-stda-g1"
+    build:
+      context: .
+      network: host
+    container_name: "zabbix-proxy1-lem-g1"
     restart: unless-stopped
     networks:
       zabbix_proxy_net:
-        ipv4_address: 172.16.3.2
+        ipv4_address: 172.16.3.50
     environment:
       - ZBX_PROXYMODE=0
       - ZBX_SERVER_HOST=100.76.180.207:10051;172.16.9.78:10051
-      - ZBX_HOSTNAME=prx1-stda-g1
+      - ZBX_HOSTNAME=prx1-lem-g1
       - ZBX_DEBUGLEVEL=3
       - ZBX_ENABLEREMOTECOMMANDS=1
       - ZBX_PROXYLOCALBUFFER=0
@@ -61,12 +59,12 @@ services:
       - ZBX_STARTPINGERS=4
       - ZBX_CACHESIZE=60M
       - ZBX_PROXYOFFLINEBUFFER=24
-      - ZBX_DB_TYPE=postgresql
-      - ZBX_DB_HOST=172.16.3.6
-      - ZBX_DB_PORT=5432
-      - ZBX_DB_NAME=zabbix_proxy
-      - ZBX_DB_USER=zabbix
-      - ZBX_DB_PASSWORD=zabbix_db_prx1
+      - NB_WG_DISABLE_KERNEL=true
+      - WG_DISABLE_KERNEL=true
+      - NB_WG_PORT=51821
+      - NETBIRD_SETUP_KEY=D5C89B21-3261-4B15-BEDF-0B0BE6C24C64
+      - NETBIRD_MGMT_URL=https://netbird.nortenettelecom.net.br
+      - NB_USE_USERSPACE_WG=true
     ulimits:
       nofile:
         soft: 65536
@@ -75,39 +73,34 @@ services:
         soft: 65536
         hard: 65536
     volumes:
-      #- ./g1/prx1/db_data:/var/lib/zabbix/db_data
       - ./g1/prx1/alertscripts:/usr/lib/zabbix/alertscripts
       - ./g1/prx1/externalscripts:/usr/lib/zabbix/externalscripts
       - ./g1/prx1/enc:/var/lib/zabbix/enc
       - ./g1/prx1/mibs:/var/lib/zabbix/mibs
+      - ./g1/prx1/netbird:/var/lib/netbird
+    tmpfs:
+      - /var/lib/zabbix/db_data:size=1G,uid=199,gid=199
     cap_add:
       - NET_ADMIN
       - NET_RAW
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
 
-  prx2_db:
-      image: postgres:13-alpine
-      container_name: zabbix-proxy2-db
-      networks:
-        zabbix_proxy_net:
-          ipv4_address: 172.16.3.7 # Novo IP para o DB
-      environment:
-        - POSTGRES_DB=zabbix_proxy
-        - POSTGRES_USER=zabbix
-        - POSTGRES_PASSWORD=zabbix_db_prx2
-      volumes:
-        - ./g2/prx2/postgres_data:/var/lib/postgresql/data
-      restart: unless-stopped
   prx2:
-    build: .
-    container_name: "zabbix-proxy2-stda-g2"
+    build:
+      context: .
+      network: host
+    container_name: "zabbix-proxy2-lem-g2"
     restart: unless-stopped
     networks:
       zabbix_proxy_net:
-        ipv4_address: 172.16.3.3
+        ipv4_address: 172.16.3.51
     environment:
       - ZBX_PROXYMODE=0
       - ZBX_SERVER_HOST=100.76.180.207:10051;172.16.9.78:10051
-      - ZBX_HOSTNAME=prx2-stda-g2
+      - ZBX_HOSTNAME=prx2-lem-g2
       - ZBX_DEBUGLEVEL=3
       - ZBX_ENABLEREMOTECOMMANDS=1
       - ZBX_PROXYLOCALBUFFER=0
@@ -134,12 +127,12 @@ services:
       - ZBX_STARTPINGERS=4
       - ZBX_CACHESIZE=60M
       - ZBX_PROXYOFFLINEBUFFER=24
-      - ZBX_DB_TYPE=postgresql
-      - ZBX_DB_HOST=172.16.3.7
-      - ZBX_DB_PORT=5432
-      - ZBX_DB_NAME=zabbix_proxy
-      - ZBX_DB_USER=zabbix
-      - ZBX_DB_PASSWORD=zabbix_db_prx2
+      - NB_WG_DISABLE_KERNEL=true
+      - WG_DISABLE_KERNEL=true
+      - NB_WG_PORT=51822
+      - NETBIRD_SETUP_KEY=D5C89B21-3261-4B15-BEDF-0B0BE6C24C64
+      - NETBIRD_MGMT_URL=https://netbird.nortenettelecom.net.br
+      - NB_USE_USERSPACE_WG=true
     ulimits:
       nofile:
         soft: 65536
@@ -148,39 +141,34 @@ services:
         soft: 65536
         hard: 65536
     volumes:
-      #- ./g2/prx2/db_data:/var/lib/zabbix/db_data
       - ./g2/prx2/alertscripts:/usr/lib/zabbix/alertscripts
       - ./g2/prx2/externalscripts:/usr/lib/zabbix/externalscripts
       - ./g2/prx2/enc:/var/lib/zabbix/enc
       - ./g2/prx2/mibs:/var/lib/zabbix/mibs
+      - ./g2/prx2/netbird:/var/lib/netbird
+    tmpfs:
+      - /var/lib/zabbix/db_data:size=1G,uid=199,gid=199
     cap_add:
       - NET_ADMIN
       - NET_RAW
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
 
-  prx3_db:
-      image: postgres:13-alpine
-      container_name: zabbix-proxy3-db
-      networks:
-        zabbix_proxy_net:
-          ipv4_address: 172.16.3.8 # Novo IP para o DB
-      environment:
-        - POSTGRES_DB=zabbix_proxy
-        - POSTGRES_USER=zabbix
-        - POSTGRES_PASSWORD=zabbix_db_prx3
-      volumes:
-        - ./g3/prx3/postgres_data:/var/lib/postgresql/data
-      restart: unless-stopped
   prx3:
-    build: .
-    container_name: "zabbix-proxy3-stda-g3"
+    build:
+      context: .
+      network: host
+    container_name: "zabbix-proxy3-lem-g3"
     restart: unless-stopped
     networks:
       zabbix_proxy_net:
-        ipv4_address: 172.16.3.4
+        ipv4_address: 172.16.3.52
     environment:
       - ZBX_PROXYMODE=0
       - ZBX_SERVER_HOST=100.76.180.207:10051;172.16.9.78:10051
-      - ZBX_HOSTNAME=prx3-stda-g3
+      - ZBX_HOSTNAME=prx3-lem-g3
       - ZBX_DEBUGLEVEL=3
       - ZBX_ENABLEREMOTECOMMANDS=1
       - ZBX_PROXYLOCALBUFFER=0
@@ -207,12 +195,12 @@ services:
       - ZBX_STARTPINGERS=4
       - ZBX_CACHESIZE=60M
       - ZBX_PROXYOFFLINEBUFFER=24
-      - ZBX_DB_TYPE=postgresql
-      - ZBX_DB_HOST=172.16.3.8
-      - ZBX_DB_PORT=5432
-      - ZBX_DB_NAME=zabbix_proxy
-      - ZBX_DB_USER=zabbix
-      - ZBX_DB_PASSWORD=zabbix_db_prx3
+      - NB_WG_DISABLE_KERNEL=true
+      - WG_DISABLE_KERNEL=true
+      - NB_WG_PORT=51823
+      - NETBIRD_SETUP_KEY=D5C89B21-3261-4B15-BEDF-0B0BE6C24C64
+      - NETBIRD_MGMT_URL=https://netbird.nortenettelecom.net.br
+      - NB_USE_USERSPACE_WG=true
     ulimits:
       nofile:
         soft: 65536
@@ -221,39 +209,34 @@ services:
         soft: 65536
         hard: 65536
     volumes:
-      #- ./g3/prx3/db_data:/var/lib/zabbix/db_data
       - ./g3/prx3/alertscripts:/usr/lib/zabbix/alertscripts
       - ./g3/prx3/externalscripts:/usr/lib/zabbix/externalscripts
       - ./g3/prx3/enc:/var/lib/zabbix/enc
       - ./g3/prx3/mibs:/var/lib/zabbix/mibs
+      - ./g3/prx3/netbird:/var/lib/netbird
+    tmpfs:
+      - /var/lib/zabbix/db_data:size=1G,uid=199,gid=199
     cap_add:
       - NET_ADMIN
       - NET_RAW
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
 
-  prx4_db:
-      image: postgres:13-alpine
-      container_name: zabbix-proxy4-db
-      networks:
-        zabbix_proxy_net:
-          ipv4_address: 172.16.3.9 # Novo IP para o DB
-      environment:
-        - POSTGRES_DB=zabbix_proxy
-        - POSTGRES_USER=zabbix
-        - POSTGRES_PASSWORD=zabbix_db_prx4
-      volumes:
-        - ./g4/prx4/postgres_data:/var/lib/postgresql/data
-      restart: unless-stopped
   prx4:
-    build: .
-    container_name: "zabbix-proxy4-stda-g4"
+    build:
+      context: .
+      network: host
+    container_name: "zabbix-proxy4-lem-g4"
     restart: unless-stopped
     networks:
       zabbix_proxy_net:
-        ipv4_address: 172.16.3.5
+        ipv4_address: 172.16.3.53
     environment:
       - ZBX_PROXYMODE=0
       - ZBX_SERVER_HOST=100.76.180.207:10051;172.16.9.78:10051
-      - ZBX_HOSTNAME=prx4-stda-g4
+      - ZBX_HOSTNAME=prx4-lem-g4
       - ZBX_DEBUGLEVEL=3
       - ZBX_ENABLEREMOTECOMMANDS=1
       - ZBX_PROXYLOCALBUFFER=0
@@ -280,12 +263,12 @@ services:
       - ZBX_STARTPINGERS=4
       - ZBX_CACHESIZE=60M
       - ZBX_PROXYOFFLINEBUFFER=24
-      - ZBX_DB_TYPE=postgresql
-      - ZBX_DB_HOST=172.16.3.9
-      - ZBX_DB_PORT=5432
-      - ZBX_DB_NAME=zabbix_proxy
-      - ZBX_DB_USER=zabbix
-      - ZBX_DB_PASSWORD=zabbix_db_prx4
+      - NB_WG_DISABLE_KERNEL=true
+      - WG_DISABLE_KERNEL=true
+      - NB_WG_PORT=51824
+      - NETBIRD_SETUP_KEY=D5C89B21-3261-4B15-BEDF-0B0BE6C24C64
+      - NETBIRD_MGMT_URL=https://netbird.nortenettelecom.net.br
+      - NB_USE_USERSPACE_WG=true
     ulimits:
       nofile:
         soft: 65536
@@ -294,11 +277,17 @@ services:
         soft: 65536
         hard: 65536
     volumes:
-      #- ./g4/prx4/db_data:/var/lib/zabbix/db_data
       - ./g4/prx4/alertscripts:/usr/lib/zabbix/alertscripts
       - ./g4/prx4/externalscripts:/usr/lib/zabbix/externalscripts
       - ./g4/prx4/enc:/var/lib/zabbix/enc
       - ./g4/prx4/mibs:/var/lib/zabbix/mibs
+      - ./g4/prx4/netbird:/var/lib/netbird
+    tmpfs:
+      - /var/lib/zabbix/db_data:size=1G,uid=199,gid=199
     cap_add:
       - NET_ADMIN
       - NET_RAW
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
