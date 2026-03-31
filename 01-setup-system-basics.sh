@@ -48,7 +48,6 @@ apt-get install -y \
     gnupg \
     lsb-release \
     apt-transport-https \
-    software-properties-common \
     net-tools \
     iproute2 \
     iputils-ping \
